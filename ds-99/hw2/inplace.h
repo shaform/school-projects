@@ -189,9 +189,11 @@ namespace HOMEWORK
 		node *bl = pop(it);
 		delete_f(bl);
 
+		sz_t mem = bl->mem;
+
 		// Split the memory
 		if (bl->sz > nSize+SIZE) {
-			node *t = new node(0, 0, bl->sz-nSize-SIZE, bl->mem + nSize + SIZE);
+			node *t = new node(0, 0, bl->sz-nSize-SIZE, mem + nSize + SIZE);
 			set_size(t->mem, t->sz);
 
 			t = insert_f(t);
@@ -200,11 +202,11 @@ namespace HOMEWORK
 			bl->sz = nSize;
 		}
 
-		set_size(bl->mem, bl->sz);
+		set_size(mem, bl->sz);
 
 		delete bl;
 
-		return (void * ) bl->mem;
+		return (void * ) mem;
 	}
 
 	
