@@ -37,7 +37,7 @@ namespace HOMEWORK
 
 
 		node(node *next, node *prev, sz_t sz, sz_t mem)
-			: next(next), prev(prev), sz(sz), mem(mem)
+			: next(next), prev(prev), sz(sz), mem(mem), top(0), down(0)
 		{
 		}
 		node() {}
@@ -171,7 +171,6 @@ namespace HOMEWORK
 		fl.top = &nd;
 		fl.lesser = fl.larger = new lst(nd.next, &fl, &fl);
 		nd.next->top = fl.lesser;
-		nd.next->down = 0;
 	}
 
 	inline void* acquire(unsigned long long nSize)
