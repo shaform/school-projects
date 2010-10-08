@@ -124,6 +124,7 @@ namespace HOMEWORK
 		set_size(u->mem, u->sz);
 
 		if (v->top) delete_lst(v);
+		if (u->top) delete_lst(u);
 		delete v;
 
 		return u;
@@ -169,6 +170,8 @@ namespace HOMEWORK
 
 		fl.top = &nd;
 		fl.lesser = fl.larger = new lst(nd.next, &fl, &fl);
+		nd.next->top = fl.lesser;
+		nd.next->down = 0;
 	}
 
 	inline void* acquire(unsigned long long nSize)
