@@ -1,5 +1,8 @@
 #pragma once
 
+namespace HELPER
+{
+}
 
 namespace HOMEWORK
 {
@@ -7,11 +10,27 @@ namespace HOMEWORK
 	typedef unsigned long long sz_f;
 	const size_t SIZE = sizeof(sz_f);
 
-//	const sz_t MAXSZ = 4194304;
+	inline void set_size(sz_t ptr, sz_f sz)
+	{
+		ptr -= SIZE;
+		*((sz_f *) ptr) = sz;
 
+	}
+	inline sz_f get_size(sz_t ptr)
+	{
+		ptr -= SIZE;
+		return *((sz_f *) ptr);
+	}
+
+
+	struct lst;
 	struct node {
 		node *next;
 		node *prev;
+
+		lst *top;
+		node *down;
+		
 
 		sz_f sz;
 		sz_t mem;
@@ -23,40 +42,99 @@ namespace HOMEWORK
 		}
 		node() {}
 	};
-	node nd;
 
-	struct destructor {
-		~destructor()
+	struct lst {
+		node *top;
+		lst *larger;
+		lst *lesser;
+
+		lst (node *top, lst *larger, lst *lesser)
+			: top(top), larger(larger), lesser(lesser)
 		{
-			node *it = nd.next;
-			while (it != &nd) {
-				node *t = it;
-				it = it->next;
-				delete t;
-			}
 		}
-	} des;
+		lst() {}
+	};
 
-	void set_size(sz_t ptr, sz_f sz)
+	node nd;
+	lst fl;
+
+
+	inline node *pop(lst *u)
 	{
-		ptr -= SIZE;
-		*((sz_f *) ptr) = sz;
+		node *ret = u->top;
+		ret->top = 0;
 
+		if ((u->top = ret->down) == 0) {
+			u->lesser->larger = u->larger;
+			u->larger->lesser = u->lesser;
+			delete u;
+		}
+
+		ret->down = 0;
+		return ret;
 	}
-	sz_f get_size(sz_t ptr)
+
+
+	inline void delete_lst(node *u)
 	{
-		ptr -= SIZE;
-		return *((sz_f *) ptr);
+		node *it = u->top->top;
+		if (it == u) {
+			pop(u->top);
+			return;
+		}
+
+		while (it->down != u)
+			it = it->down;
+
+		it->down = u->down;
+		u->down = 0;
+		u->top = 0;
+	}
+	inline void insert_lst(node *u)
+	{
+		lst *it = fl.larger;
+
+		while (it->top->sz < u->sz)
+			it = it->larger;
+
+		if (it->top->sz == u->sz) {
+			u->top = it;
+			u->down = it->top;
+			it->top = u;
+		} else {
+			lst *t = new lst(u, it, it->lesser);
+			it->lesser->larger = t;
+			it->lesser = t;
+			u->top = t;
+			u->down = 0;
+		}
 	}
 
 	// Free list
+	inline bool connected(node *u, node *v)
+	{
+		return u->mem + u->sz + SIZE == v->mem;
+	}
+	inline node *merge(node *u, node *v)
+	{
+		u->next = v->next;
+		v->next->prev = u;
+
+		u->sz += (v->sz + SIZE);
+		set_size(u->mem, u->sz);
+
+		if (v->top) delete_lst(v);
+		delete v;
+
+		return u;
+	}
 	inline void delete_f(node *u)
 	{
 		u->prev->next = u->next;
 		u->next->prev = u->prev;
 		u->prev = u->next = 0;
 	}
-	inline void insert_f(node *u)
+	inline node *insert_f(node *u)
 	{
 		node *it = nd.next;
 		while (it->mem < u->mem)
@@ -68,33 +146,13 @@ namespace HOMEWORK
 		u->prev->next = u;
 		it->prev = u;
 
-		if (u->prev->mem + u->prev->sz + SIZE == u->mem) {
-			node *t = u->prev;
-			u->prev = t->prev;
-			t->prev->next = u;
 
-			u->sz += (t->sz + SIZE);
-			u->mem = t->mem;
-			set_size(u->mem, u->sz);
+		if (connected(u->prev, u))
+			u = merge(u->prev, u);
+		if (connected(u, u->next))
+			u = merge(u, u->next);
 
-			delete t;
-		}
-
-		if (u->next->mem - SIZE - u->sz == u->mem) {
-			node *t = u->next;
-			u->next = t->next;
-
-			t->next->prev = u;
-
-			u->sz += (t->sz + SIZE);
-			set_size(u->mem, u->sz);
-
-			delete t;
-		}
-
-
-
-
+		return u;
 	}
 
 
@@ -105,43 +163,77 @@ namespace HOMEWORK
 		nd.sz = nSize+1u;
 		nd.mem = mem + nSize + SIZE*2;
 
-		nd.next = nd.prev = new node(&nd, &nd, nSize-SIZE, ((sz_t ) addr)+SIZE);
+		nd.next = nd.prev = new node(&nd, &nd, nSize-SIZE, mem);
 		set_size(nd.next->mem, nd.next->sz);
+
+
+		fl.top = &nd;
+		fl.lesser = fl.larger = new lst(nd.next, &fl, &fl);
 	}
 
 	inline void* acquire(unsigned long long nSize)
 	{
-		node *it = nd.next;
+		lst *it = fl.larger;
 
-		while (it->sz < nSize)
-			it = it->next;
+		while (it->top->sz < nSize)
+			it = it->larger;
 
 
-		if (it == &nd)
+		if (it == &fl)
 			return 0;
 
-		void *mem = (void *)it->mem;
-		delete_f(it);
 
-		if (it->sz > nSize+SIZE) {
-			node *t = new node(0, 0, it->sz-nSize-SIZE, it->mem + nSize + SIZE);
+		node *bl = pop(it);
+		delete_f(bl);
+
+		// Split the memory
+		if (bl->sz > nSize+SIZE) {
+			node *t = new node(0, 0, bl->sz-nSize-SIZE, bl->mem + nSize + SIZE);
 			set_size(t->mem, t->sz);
 
-			insert_f(t);
+			t = insert_f(t);
+			insert_lst(t);
 
-			it->sz = nSize;
+			bl->sz = nSize;
 		}
 
-		set_size(it->mem, it->sz);
+		set_size(bl->mem, bl->sz);
 
-		delete it;
+		delete bl;
 
-		return mem;
+		return (void * ) bl->mem;
 	}
+
+	
+
+
 
 	inline void release(void* addr)
 	{
 		node *t = new node(0, 0, get_size((sz_t ) addr), (sz_t ) addr);
-		insert_f(t);
+		t = insert_f(t);
+		insert_lst(t);
 	}
+
+
+
+
+	struct destructor {
+		~destructor()
+		{
+			node *it = nd.next;
+			while (it != &nd) {
+				node *t = it;
+				it = it->next;
+				delete t;
+			}
+
+			lst *lit = fl.larger;
+			while (lit != &fl) {
+				lst *t = lit;
+				lit = lit->larger;
+				delete t;
+			}
+		}
+	} des;
 }
