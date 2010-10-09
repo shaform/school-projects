@@ -239,8 +239,7 @@ namespace HOMEWORK
 
 			t = insert_f(t);
 
-			if (get_size(t) > BOUND)
-				insert_lst(t);
+			insert_lst(t);
 		}
 
 		return get_mem(it);
