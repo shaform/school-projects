@@ -231,8 +231,7 @@ namespace HOMEWORK
 
 		// Split the memory
 		if (sz > nSize+DATA+BOUND) {
-			get_size(it) = nSize;
-			set_second_size(it);
+			initialize(it, nSize);
 
 			ptn t = get_next(it);
 			initialize(t, sz-nSize-DATA);
