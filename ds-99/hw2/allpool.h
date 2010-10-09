@@ -73,10 +73,9 @@ namespace HOMEWORK
 	{
 		ptn &t = get_down(u);
 		get_up(t) = root;
-		t = NOTINLIST;
 
 		ptn larger = get_larger(u), lesser = get_lesser(u);
-		if (get_up(u) == root) {
+		if (t == root) {
 			get_larger(lesser) = larger;
 			get_lesser(larger) = lesser;
 		} else {
@@ -87,6 +86,7 @@ namespace HOMEWORK
 			get_larger(lesser) = t;
 			get_lesser(larger) = t;
 		}
+		t = NOTINLIST;
 	}
 
 
@@ -255,6 +255,8 @@ namespace HOMEWORK
 		ptn it = get_ptn(addr);
 
 		it = insert_f(it);
+
+		get_down(it) = NOTINLIST;
 
 		if (get_size(it) > BOUND)
 			insert_lst(it);
