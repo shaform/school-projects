@@ -74,7 +74,7 @@ namespace HOMEWORK
 		return u - *((sz_t *) (u-FOOTER)) - DATA;
 	}
 
-#if 0
+#if DEBUG
 #include <cstdio>
 	void check_list()
 	{
@@ -103,12 +103,12 @@ namespace HOMEWORK
 
 	inline void pop(ptn u)
 	{
-		ptn t = get_down(u);
+		ptn &t = get_down(u);
 		get_up(t) = root;
-		get_down(u) = NOTINLIST;
+		t = NOTINLIST;
 
 		ptn larger = get_larger(u), lesser = get_lesser(u);
-		if (t == root) {
+		if (get_up(u) == root) {
 			get_larger(lesser) = larger;
 			get_lesser(larger) = lesser;
 		} else {
