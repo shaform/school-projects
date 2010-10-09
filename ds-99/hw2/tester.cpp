@@ -3,19 +3,19 @@
 #include <vector>
 #include <ctime>
 #include <cstdlib>
-#include "inplace.h"
+#include "allpool.h"
 using namespace std;
+using namespace HOMEWORK;
 
 int main()
 {
-	using namespace HOMEWORK;
 
 	void *test = operator new(4194308);
 	initialize_pool(test, 4194308);
 
 	// Large memory check
-	int *t = (int *)acquire(4194300);
-	int *u = (int *)acquire(sizeof(int)*3);
+	int *t = (int *)acquire(4194000);
+	int *u = (int *)acquire(sizeof(int)*300);
 	if (u==0) {
 		release((void *)t);
 		t = (int *)acquire(5*sizeof(int));
