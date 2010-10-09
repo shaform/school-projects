@@ -74,7 +74,18 @@ namespace HOMEWORK
 		return u - *((sz_t *) (u-FOOTER)) - DATA;
 	}
 
-
+#if 0
+#include <cstdio>
+	void check_list()
+	{
+		using namespace std;
+		ptn it = root;
+		while (it != tail) {
+			printf("#%llu : %llu\n", it, get_size(it));
+			it = get_next(it);
+		}
+	}
+#endif
 
 	inline void initialize(ptn u, sz_t sz)
 	{
@@ -185,6 +196,8 @@ namespace HOMEWORK
 
 	inline ptn insert_f(ptn u)
 	{
+		get_down(u) = root;
+
 		ptn s = get_prev(u);
 
 		if (is_free(s)) {
