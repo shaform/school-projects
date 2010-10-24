@@ -42,6 +42,8 @@ namespace HOMEWORK
 		}
 		node() {}
 	};
+	const size_t BOUND = sizeof(node);
+	const size_t LOW = BOUND;
 
 	struct lst {
 		node *top;
@@ -63,6 +65,7 @@ namespace HOMEWORK
 	{
 		node *ret = u->top;
 		ret->top = 0;
+
 
 		if ((u->top = ret->down) == 0) {
 			u->lesser->larger = u->larger;
@@ -175,7 +178,12 @@ namespace HOMEWORK
 
 	inline void* acquire(unsigned long long nSize)
 	{
+
+		if (nSize <= LOW)
+			return 0;
+
 		lst *it = fl.larger;
+
 
 		while (it->top->sz < nSize)
 			it = it->larger;
@@ -196,7 +204,8 @@ namespace HOMEWORK
 			set_size(t->mem, t->sz);
 
 			t = insert_f(t);
-			insert_lst(t);
+			if (t->sz > BOUND)
+				insert_lst(t);
 
 			bl->sz = nSize;
 		}
@@ -216,7 +225,9 @@ namespace HOMEWORK
 	{
 		node *t = new node(0, 0, get_size((sz_t ) addr), (sz_t ) addr);
 		t = insert_f(t);
-		insert_lst(t);
+
+		if (t->sz > BOUND)
+			insert_lst(t);
 	}
 
 
@@ -238,6 +249,7 @@ namespace HOMEWORK
 				lit = lit->larger;
 				delete t;
 			}
+
 		}
 	} des;
 }

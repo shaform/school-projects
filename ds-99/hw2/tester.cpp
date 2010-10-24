@@ -5,7 +5,11 @@
 #include <cstdlib>
 #include "allpool.h"
 using namespace std;
-using namespace HOMEWORK;
+using HOMEWORK::initialize_pool;
+using HOMEWORK::acquire;
+using HOMEWORK::release;
+
+const size_t PSIZE = 4194304;
 
 #if DEBUG
 #define	CHECK check_list()
@@ -16,78 +20,92 @@ using namespace HOMEWORK;
 int main()
 {
 
-	void *test = operator new(4194308);
-	initialize_pool(test, 4194308);
+	void *pool = operator new(PSIZE);
+	initialize_pool(pool, PSIZE);
 
 	// Large memory check
-	int *t = (int *)acquire(4194000);
-	memset(t, 0, 4194000);
-	CHECK;
-	int *u = (int *)acquire(sizeof(int)*300);
-	CHECK;
-	if (u==0) {
+	printf("Running check   (large acquire  / release)\n");
+	int *t = (int *)acquire(PSIZE-1000);
+	int *u = 0;
+	if (t) {
+		memset(t, 0xff, PSIZE-1000);
+		CHECK;
+		u = (int *)acquire(sizeof(int)*300);
+		CHECK;
 		release((void *)t);
 		CHECK;
 		t = (int *)acquire(5*sizeof(int));
-		memset(t, 0, 5*sizeof(int));
+		if (t) memset(t, 0xff, 5*sizeof(int));
 		CHECK;
+		if (u) release((void *)u);
 		u = (int *)acquire(sizeof(int)*3);
-		memset(u, 0, 3*sizeof(int));
-		CHECK;
+		if (u) {
+			memset(u, 0xff, 3*sizeof(int));
+			CHECK;
+		}
 	}
+
+
+
+	printf("Running check   (multiple acquire  / release)\n");
 	int *v = (int *)acquire(sizeof(int)*4);
-	memset(v, 0, 4*sizeof(int));
+	if (v) memset(v, 0xff, 4*sizeof(int));
 	CHECK;
 
 	// Check for memory validity
-	for (int i=0; i<5; ++i)
+	if (t) for (int i=0; i<5; ++i)
 		t[i] = i;
-	for (int i=0; i<3; ++i)
+	if (u) for (int i=0; i<3; ++i)
 		u[i] = i;
-	for (int i=0; i<4; ++i)
+	if (v) for (int i=0; i<4; ++i)
 		v[i] = i;
 
-	release((void *)t);
+	// Check the content of t, u, v by hand here.
+
+	if (t) release((void *)t);
 	CHECK;
 	t = (int *)acquire(sizeof(int)*3);
-	memset(t, 0, 3*sizeof(int));
+	if (t) memset(t, 0xff, 3*sizeof(int));
 	CHECK;
 	int *w = (int *)acquire(sizeof(int)*2);
-	memset(w, 0, 2*sizeof(int));
+	if (w) memset(w, 0xff, 2*sizeof(int));
 	CHECK;
-	release((void *)w);
+	if (w) release((void *)w);
 	CHECK;
 	w = (int *)acquire(sizeof(int)*2);
-	memset(w, 0, 2*sizeof(int));
+	if (w) memset(w, 0, 2*sizeof(int));
 	CHECK;
-	release((void *)w);
+	if (w) release((void *)w);
 	CHECK;
 	w = (int *)acquire(sizeof(int)*20);
-	memset(w, 0, 20*sizeof(int));
+	if (w) memset(w, 0xff, 20*sizeof(int));
 	CHECK;
-	release((void *)t);
+	if (t)
+		release((void *)t);
 	CHECK;
-	release((void *)u);
+	if (u)
+		release((void *)u);
 	CHECK;
-	release((void *)v);
+	if (v)
+		release((void *)v);
 	CHECK;
-	release((void *)w);
+	if (w)
+		release((void *)w);
 	CHECK;
 
 
+	printf("Running check  (random acquire  / release)\n");
 	// random check
 	vector<void *> vec;
-	int k =0;
 	for (int i=0; i<10000; ++i) {
-		int r = (rand() % 10000000) + 1;
-		k+=r;
+		int r = (rand() % 100000) + 1;
 		void * t = acquire(r);
 		if (t) {
 			memset(t, 0xff, r);
 			vec.push_back(t);
 		}
-		if (i % 1000) {
-			int rt = (rand() % 500) +1;
+		if (i % 1000 == 0) {
+			int rt = (rand() % 300) +1;
 			while (rt > 0 && !vec.empty()) {
 				int x = rand() % vec.size();
 				release(vec[x]);
@@ -101,6 +119,7 @@ int main()
 		vec.pop_back();
 	}
 
+	printf("Running check  (reallocate check)\n");
 	// Reallocate Check
 	void *r[100];
 	r[0] = acquire(1000);
@@ -172,5 +191,5 @@ int main()
 		CHECK;
 	}
 
-	operator delete(test);
+	operator delete(pool);
 }
