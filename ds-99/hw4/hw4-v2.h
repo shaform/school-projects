@@ -8,6 +8,7 @@
 using namespace std;
 namespace WPH {
 
+	const size_t SSZ = 15;
 	const size_t MUL = 2;
 
 	template<typename T>
@@ -19,11 +20,11 @@ namespace WPH {
 				typedef const T& const_reference;
 
 				// ctor/copy ctor/dtor
-				stack(size_t ssz)
-					: start(static_cast<T*>(operator new[](sizeof(T)*ssz))),
+				stack()
+					: start(static_cast<T*>(operator new[](sizeof(T)*SSZ))),
 					finish(start),
-					end_storage(start+ssz),
-					sz(ssz) {}
+					end_storage(start+SSZ),
+					sz(SSZ) {}
 				~stack() { operator delete[] (start); }
 
 				// capacity
@@ -77,15 +78,18 @@ namespace WPH {
 
 namespace HOMEWORK {
 	using WPH::stack;
+	union nd {
+		double d;
+		char c;
+	};
 
 	const char *curr;
 
-	stack<double> s(5);
-	stack<char> op_s(9);
+	stack<nd> s;
+	stack<nd> op_s;
 
 	// next token
-	char tkc;
-	double tkd;
+	nd tk;
 
 	// 1 : ()
 	// 2 : + -
@@ -100,7 +104,7 @@ namespace HOMEWORK {
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,
 	};
 
-	bool ttype;
+	bool isopr;
 	// false is operator, true is operand
 
 
@@ -121,35 +125,28 @@ namespace HOMEWORK {
 			return 0.0;
 		}
 	}
-	inline bool parse(bool &error)
+	inline bool parse()
 	{
-		if (ttype) {
-			if (*curr=='.' || *curr=='(') {
-				error = true;
-				return false;
-			} else if (*curr == '\0')
-				return false;
-			else
-				tkc = *(curr++);
-			ttype = false;
+		if (*curr == '\0')
+			return false;
+
+		if (isopr) {
+			tk.c = *(curr++);
+			isopr = false;
 		} else {
 			if (*curr=='(') {
-				tkc = '(';
-				ttype = false;
+				tk.c = '(';
+				isopr = false;
 				++curr;
 				return true;
 			}
 
 			const char *endptr;
-			tkd = strtotkd(curr, endptr);
+			tk.d = strtotkd(curr, endptr);
 
-			if (endptr==curr) {
-				error = true;
-				return false;
-			}
 			curr = endptr;
 
-			ttype = true;
+			isopr = true;
 		}
 
 		return true;
@@ -159,13 +156,13 @@ namespace HOMEWORK {
 	void eval(char op)
 	{
 		// Get the two operands, assuming that they exist.
-		double u;
+		double t, u;
 
-		u = s.top();
+		u = s.top().d;
 		s.pop();
 
-		double &t = s.top();
-
+		t = s.top().d;
+		s.pop();
 
 		// Do the calculation.
 		switch (op) {
@@ -184,63 +181,94 @@ namespace HOMEWORK {
 			default:
 				t = pow(t, u);
 		}
+
+
+		nd tnd;
+		tnd.d = t;
+		s.push(tnd);
 	}
 
-	int par_c;
+	inline bool check(const char *str)
+	{
+		bool isopr = false;
+		int pp = 0;
+
+		while (*str != '\0') {
+			if (isopr) {
+				if (*str == '.' || *str == '(')
+					return false;
+				else if (*str == ')') {
+					if (--pp < 0) return false;
+					isopr = true;
+				} else
+					isopr = false;
+			} else {
+				if (*str=='(')
+					++pp;
+				else {
+					const char *endptr;
+					strtotkd(str, endptr);
+
+					if (endptr==str)
+						return false;
+
+					isopr = true;
+					str = endptr;
+					continue;
+				}
+			}
+			++str;
+		}
+
+		return isopr;
+	}
+
 	double Eval(const char *str, bool &error)
 	{
+		if (!check(str)) {
+			error = true;
+			return -1.0;
+		} else
+			error = false;
+
 		curr = str;
 		s.clear();
 		op_s.clear();
-		par_c = 0;
-		ttype = false;
-		error = false;
+		isopr = false;
 
-		while (parse(error)) {
-			// if is a operand
-			if (ttype) {
-				s.push(tkd);
-				// if is a operator
-			} else {
-				if (tkc=='(') {
-					op_s.push('(');
-					++par_c;
-				} else if (tkc==')') {
-					// checking parentheses matching
-					if (--par_c < 0) {
-						error = true;
-						break;
-					}
-
-					while (op_s.top() != '(') {
-						eval(op_s.top());
+		while (parse()) {
+			if (isopr)
+				s.push(tk);
+			else {
+				if (tk.c==')') {
+					while (op_s.top().c != '(') {
+						eval(op_s.top().c);
 						op_s.pop();
 					}
 					// pop '('
 					op_s.pop();
 
 					// the pair of parentheses is a operand
-					ttype = true;
-				} else {
-					while (!op_s.empty() && pred[op_s.top()] >= pred[tkc]) {
-						eval(op_s.top());
+					isopr = true;
+				} else if (tk.c=='(')
+					op_s.push(tk);
+				else {
+					while (!op_s.empty() && pred[op_s.top().c] >= pred[tk.c]) {
+						eval(op_s.top().c);
 						op_s.pop();
 					}
-					op_s.push(tkc);
+					op_s.push(tk);
 				}
 
 			}
 		}
-		if (par_c) error = true;
 
-		if (error)
-			return -1.0;
-		else while (!op_s.empty()) {
-			eval(op_s.top());
+		while (!op_s.empty()) {
+			eval(op_s.top().c);
 			op_s.pop();
 		}
 
-		return s.top();
+		return s.top().d;
 	}
 
 }
