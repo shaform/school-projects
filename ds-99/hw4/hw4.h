@@ -1,3 +1,14 @@
+/**
+ * -- hw4 version 1 --
+ * The first attempt to solve hw4.
+ * It uses two stacks to convert infix to postfix
+ * and calculates the result on the fly.
+ * -------------------
+ * I_refs	=387534
+ * m_total	=16242
+ * priority	=1.552
+ * -------------------
+ */
 #include <cmath>
 #include <cctype>
 #include <cstdlib>
@@ -104,6 +115,7 @@ namespace HOMEWORK {
 	// false is operator, true is operand
 
 
+	/*
 	inline double strtotkd(const char *str, const char *&ptr)
 	{
 		ptr = str;
@@ -121,6 +133,7 @@ namespace HOMEWORK {
 			return 0.0;
 		}
 	}
+	*/
 	inline bool parse(bool &error)
 	{
 		if (ttype) {
@@ -140,8 +153,13 @@ namespace HOMEWORK {
 				return true;
 			}
 
-			const char *endptr;
-			tkd = strtotkd(curr, endptr);
+			if (*curr=='+' || *curr=='.') {
+				error = true;
+				return false;
+			}
+
+			char *endptr;
+			tkd = strtod(curr, &endptr);
 
 			if (endptr==curr) {
 				error = true;

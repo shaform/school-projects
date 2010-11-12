@@ -1,3 +1,15 @@
+/**
+ * -- hw4 version 2 --
+ * Failing to get better performance than version 1,
+ * this version attempts to detect error as soon as possible
+ * to eliminate the time spent on calculating invalid expressions.
+ * It also uses union to avoid multiple instantiations of stack template.
+ * -------------------
+ * I_refs	=735166
+ * m_total	=17090
+ * priority	=1.098
+ * -------------------
+ */
 #include <cmath>
 #include <cctype>
 #include <cstdlib>
