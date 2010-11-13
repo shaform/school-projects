@@ -3,10 +3,12 @@
  * The first attempt to solve hw4.
  * It uses two stacks to convert infix to postfix
  * and calculates the result on the fly.
+ * ** Updated **
+ * Merged the tktod() from version 5.
  * -------------------
- * I_refs	=387534
- * m_total	=16242
- * priority	=1.552
+ * I_refs	=105486
+ * m_total	=16609
+ * priority	=2.942
  * -------------------
  */
 #include <cmath>
@@ -103,7 +105,7 @@ namespace HOMEWORK {
 	// 3 : * /
 	// 4 : ^
 	const int pred[] = {
-		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,1,1,3,2,0,2,0,3,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -134,6 +136,32 @@ namespace HOMEWORK {
 		}
 	}
 	*/
+	inline double tktod(const char *str, char **ptr)
+	{
+		double d = 0.0, d2 = 0.1;
+		*ptr = const_cast<char *>(str);
+
+		if (**ptr=='-')
+			++*ptr;
+		while (pred[**ptr] == 0 && **ptr!= '.') {
+			d *= 10.0;
+			d += (**ptr-'0');
+			++*ptr;
+		}
+		if (**ptr == '.') {
+			++*ptr;
+			while (pred[**ptr] == 0) {
+				d += d2*(**ptr-'0');
+				d2 /= 10.0;
+				++*ptr;
+			}
+		}
+		if (*str == '-') {
+			if (*ptr == const_cast<char *>(str+1)) *ptr = const_cast<char *>(str);
+			return -d;
+		} else
+			return d;
+	}
 	inline bool parse(bool &error)
 	{
 		if (ttype) {
@@ -159,7 +187,7 @@ namespace HOMEWORK {
 			}
 
 			char *endptr;
-			tkd = strtod(curr, &endptr);
+			tkd = tktod(curr, &endptr);
 
 			if (endptr==curr) {
 				error = true;
@@ -240,7 +268,7 @@ namespace HOMEWORK {
 					// the pair of parentheses is a operand
 					ttype = true;
 				} else {
-					while (!op_s.empty() && pred[op_s.top()] >= pred[tkc]) {
+					while (!op_s.empty() && pred[op_s.top()] >= pred[tkc] && tkc != '^') {
 						eval(op_s.top());
 						op_s.pop();
 					}

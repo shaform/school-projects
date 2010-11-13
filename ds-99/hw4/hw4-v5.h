@@ -1,12 +1,13 @@
 /**
  * -- hw4 version 5 --
- * This version uses a custom number parsing subroutine
+ * Revised from version 3,
+ * this version uses a custom number parsing subroutine
  * to overcome the bottleneck detected by callgrind.
  * Surprisingly, this improves performance very much.
  * -------------------
- * I_refs	=111095
- * m_total	=15657
- * priority	=2.953
+ * I_refs	=108316
+ * m_total	=15698
+ * priority	=2.987
  * -------------------
  */
 #include <cmath>
@@ -58,9 +59,10 @@ namespace HOMEWORK {
 				++ptr;
 			}
 		}
-		if (*str == '-')
+		if (*str == '-') {
+			if (ptr == str+1) ptr = str;
 			return -d;
-		else
+		} else
 			return d;
 	}
 
@@ -77,7 +79,7 @@ namespace HOMEWORK {
 				return ERROR;
 		} else if (*curr=='(')
 			return *(curr++);
-		else if (pred[*curr] && *curr != '-')
+		else if ((pred[*curr] && *curr != '-') || *curr == '.')
 			return ERROR;
 		else {
 			const char *endptr;
@@ -176,7 +178,7 @@ namespace HOMEWORK {
 					isopr = true;
 					break;
 				default:
-					while (!op_empty() && pred[op_top()] >= pred[tk]) {
+					while (!op_empty() && pred[op_top()] >= pred[tk] && tk != '^') {
 						eval(op_top());
 						op_pop();
 					}

@@ -4,10 +4,12 @@
  * this version attempts to detect error as soon as possible
  * to eliminate the time spent on calculating invalid expressions.
  * It also uses union to avoid multiple instantiations of stack template.
+ * ** Updated **
+ * Merged the tktod() from version 5.
  * -------------------
- * I_refs	=735166
- * m_total	=17090
- * priority	=1.098
+ * I_refs	=144637
+ * m_total	=17402
+ * priority	=2.455
  * -------------------
  */
 #include <cmath>
@@ -108,7 +110,7 @@ namespace HOMEWORK {
 	// 3 : * /
 	// 4 : ^
 	const int pred[] = {
-		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,1,1,3,2,0,2,0,3,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -120,6 +122,33 @@ namespace HOMEWORK {
 	// false is operator, true is operand
 
 
+	inline double tktod(const char *str, char **ptr)
+	{
+		double d = 0.0, d2 = 0.1;
+		*ptr = const_cast<char *>(str);
+
+		if (**ptr=='-')
+			++*ptr;
+		while (pred[**ptr] == 0 && **ptr!= '.') {
+			d *= 10.0;
+			d += (**ptr-'0');
+			++*ptr;
+		}
+		if (**ptr == '.') {
+			++*ptr;
+			while (pred[**ptr] == 0) {
+				d += d2*(**ptr-'0');
+				d2 /= 10.0;
+				++*ptr;
+			}
+		}
+		if (*str == '-') {
+			if (*ptr == const_cast<char *>(str+1)) *ptr = const_cast<char *>(str);
+			return -d;
+		} else
+			return d;
+	}
+	/*
 	inline double strtotkd(const char *str, const char *&ptr)
 	{
 		ptr = str;
@@ -137,6 +166,7 @@ namespace HOMEWORK {
 			return 0.0;
 		}
 	}
+	*/
 	inline bool parse()
 	{
 		if (*curr == '\0')
@@ -153,8 +183,8 @@ namespace HOMEWORK {
 				return true;
 			}
 
-			const char *endptr;
-			tk.d = strtotkd(curr, endptr);
+			char *endptr;
+			tk.d = tktod(curr, &endptr);
 
 			curr = endptr;
 
@@ -207,19 +237,21 @@ namespace HOMEWORK {
 
 		while (*str != '\0') {
 			if (isopr) {
-				if (*str == '.' || *str == '(')
-					return false;
-				else if (*str == ')') {
+				if (*str == ')') {
 					if (--pp < 0) return false;
 					isopr = true;
+				} else if (pred[*str]==0) {
+					return false;
 				} else
 					isopr = false;
 			} else {
 				if (*str=='(')
 					++pp;
+				else if (*str =='.')
+					return false;
 				else {
-					const char *endptr;
-					strtotkd(str, endptr);
+					char *endptr;
+					tktod(str, &endptr);
 
 					if (endptr==str)
 						return false;
@@ -265,7 +297,7 @@ namespace HOMEWORK {
 				} else if (tk.c=='(')
 					op_s.push(tk);
 				else {
-					while (!op_s.empty() && pred[op_s.top().c] >= pred[tk.c]) {
+					while (!op_s.empty() && pred[op_s.top().c] >= pred[tk.c] && tk.c != '^') {
 						eval(op_s.top().c);
 						op_s.pop();
 					}

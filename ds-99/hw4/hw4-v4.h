@@ -2,10 +2,12 @@
  * -- hw4 version 4 --
  * Still failing to gain faster speed,
  * this version employs a LR parser to evaluate expressions directly.
+ * ** Updated **
+ * Merged the tktod() from version 5.
  * -------------------
- * I_refs	=445762
- * m_total	=16165
- * priority	=1.450
+ * I_refs	=140362
+ * m_total	=16247
+ * priority	=2.578
  * -------------------
  */
 #include <cmath>
@@ -18,6 +20,40 @@ namespace HOMEWORK {
 	//	lexer
 
 	enum Token { END = 0, MINUS, PLUS, MUL, DIV, POW, LP, RP, NUM, ERROR, EXP };
+	const int CTK[] = {
+		END,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,
+		ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,
+		ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,LP,RP,MUL,PLUS,ERROR,MINUS,ERROR,DIV,
+		ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,
+		ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,
+		ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR,POW,
+	};
+	inline double tktod(const char *str, char **ptr)
+	{
+		double d = 0.0, d2 = 0.1;
+		*ptr = const_cast<char *>(str);
+
+		if (**ptr=='-')
+			++*ptr;
+		while (CTK[**ptr] == ERROR && **ptr!= '.') {
+			d *= 10.0;
+			d += (**ptr-'0');
+			++*ptr;
+		}
+		if (**ptr == '.') {
+			++*ptr;
+			while (CTK[**ptr] == ERROR) {
+				d += d2*(**ptr-'0');
+				d2 /= 10.0;
+				++*ptr;
+			}
+		}
+		if (*str == '-') {
+			if (*ptr == const_cast<char *>(str+1)) *ptr = const_cast<char *>(str);
+			return -d;
+		} else
+			return d;
+	}
 
 	int tk;
 	double tkd;
@@ -28,32 +64,8 @@ namespace HOMEWORK {
 	{
 		if (isopr) {
 			isopr = false;
-			switch (*(curr++)) {
-				case '+':
-					tk = PLUS;
-					break;
-				case '-':
-					tk = MINUS;
-					break;
-				case '*':
-					tk = MUL;
-					break;
-				case '/':
-					tk = DIV;
-					break;
-				case '^':
-					tk = POW;
-					break;
-				case ')':
-					tk = RP;
-					isopr = true;
-					break;
-				case '\0':
-					tk = END;
-					break;
-				default:
-					tk = ERROR;
-			}
+			tk = CTK[*(curr++)];
+			if (tk == RP) isopr = true;
 		} else if (*curr=='(') {
 			tk = LP;
 			++curr;
@@ -61,7 +73,7 @@ namespace HOMEWORK {
 			tk = ERROR;
 		} else {
 			register char *endptr;
-			tkd = strtod(curr, &endptr);
+			tkd = tktod(curr, &endptr);
 
 			if (curr == endptr)
 				tk = ERROR;
@@ -126,13 +138,15 @@ namespace HOMEWORK {
 	 */
 
 	const size_t PSZ = 15;
-	const size_t PMUL = 2;
+	//const size_t PMUL = 2;
 
-	node *start = static_cast<node*>(calloc(PSZ, sizeof(node)));
+	//node *start = static_cast<node*>(calloc(PSZ, sizeof(node)));
+	node start[PSZ];
 	node *finish = start+1;
-	node *end_storage = start+PSZ;
-	size_t p_sz = PSZ;
+	//int finish = 1;
+	//size_t p_sz = PSZ;
 
+	/*
 	void p_expand()
 	{
 		size_t nsz = p_sz*PMUL;
@@ -148,18 +162,25 @@ namespace HOMEWORK {
 		p_sz = nsz;
 		end_storage = start+p_sz;
 	}
+	*/
 
 	inline void p_push(const node &e)
 	{
+		/*
 		if (finish == end_storage)
 			p_expand();
+		 */
 
 		*(finish++) = e;
+		//start[finish++] = e;
 	}
 	inline void p_pop() { --finish; }
 	inline node& p_top() { return *(finish-1); }
+	//inline node& p_top() { return start[finish-1]; }
 	inline node& p_prev() { return *(finish-2); }
+	//inline node& p_prev() { return start[finish-2]; }
 	inline void p_clear() { finish = start+1; }
+	//inline void p_clear() { finish = 1; }
 
 	inline bool parse()
 	{
@@ -237,8 +258,9 @@ reduced:
 		else
 			return res;
 	}
+	/*
 	struct destructor {
-		~destructor() { free(start); }
+	~destructor() { free(start); }
 	} des;
-
+	*/
 }
