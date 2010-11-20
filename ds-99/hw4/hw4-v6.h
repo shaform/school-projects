@@ -4,9 +4,9 @@
  * it merges parser and lexer, and includes some
  * low level optimization techniques.
  * -------------------
- * I_refs	=87384
- * m_total	=15442
- * priority	=3.353
+ * I_refs	=84120
+ * m_total	=15336
+ * priority	=3.429
  * -------------------
  */
 #include <cmath>
@@ -17,14 +17,15 @@
 
 
 namespace HOMEWORK {
+	// -1: ( \0
 	// 1 : ()
 	// 2 : + -
 	// 3 : * /
 	// 4 : ^
 	const int pred[] = {
-		8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-		0,0,0,0,0,0,0,0,1,1,3,2,0,2,0,3,
+		0,0,0,0,0,0,0,0,-1,1,3,2,0,2,0,3,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,
@@ -33,8 +34,6 @@ namespace HOMEWORK {
 	//	lexer
 
 	typedef char CT;
-	const CT NUM = -2;
-	const CT ERROR = -1;
 
 	static double tkdtod(const char *str, const char *&ptr)
 	{
@@ -64,11 +63,9 @@ namespace HOMEWORK {
 	}
 
 	// Stacks
-	double n_sk[5];
-	CT op_sk[9];
 
-	double *n_head = n_sk-1;
-	CT *op_head = op_sk-1;
+	double *n_head;
+	CT *op_head;
 
 	static void n_push(double e) { *++n_head = e; }
 	static void op_push(CT e) { *++op_head = e; }
@@ -78,11 +75,6 @@ namespace HOMEWORK {
 
 	static double& n_top() { return *n_head; }
 	static CT& op_top() { return *op_head; }
-
-	static void n_clear() { n_head = n_sk-1; }
-	static void op_clear() { op_head = op_sk-1; }
-
-	static bool op_empty() { return op_head<op_sk; }
 
 
 	// Evalulate the postfix stack.
@@ -116,23 +108,28 @@ namespace HOMEWORK {
 		}
 	}
 
-	double res;
 
-	static bool parse(const char *curr)
+	double Eval(const char *str, bool &error)
 	{
 		double tkd;
+		double n_sk[5];
+		CT op_sk[9];
 		bool isopr = false;
-		op_clear();
-		n_clear();
+		op_head = op_sk-1;
+		n_head = n_sk-1;
+
 		int par_c = 0;
 		while (true) {
 			if (isopr) {
 				isopr = false;
-				if (*curr == '\0')
-					break;
-				if (pred[*curr]) {
-					if (*curr == ')') {
-						if (--par_c < 0) return true;
+				if (pred[*str] == -1) {
+					if (*str == '\0')
+						break;
+					else goto err;
+				}
+				if (pred[*str]) {
+					if (*str == ')') {
+						if (--par_c < 0) goto err;
 
 						while (op_top() != '(') {
 							eval(op_top());
@@ -143,51 +140,47 @@ namespace HOMEWORK {
 						isopr = true;
 					} else {
 
-						while (!op_empty() && pred[op_top()] >= pred[*curr] && *curr != '^') {
+						while (op_head>=op_sk && pred[op_top()] >= pred[*str]/* && *str != '^'*/) {
 							eval(op_top());
 							op_pop();
 						}
-						op_push(*curr);
+						op_push(*str);
 					}
-					++curr;
+					++str;
 					continue;
 				} else
-					return true;
+					goto err;
 			}
-			if (*curr=='(') {
+			if (*str=='(') {
 				op_push('(');
 				++par_c;
-				++curr;
+				++str;
 				continue;
 			}
-			if ((pred[*curr] && *curr != '-') || *curr == '.')
-				return true;
+			if ((pred[*str] && *str != '-') || *str == '.')
+				goto err;
 
 			const char *endptr;
-			tkd = tkdtod(curr, endptr);
+			tkd = tkdtod(str, endptr);
 
-			if (curr == endptr)
-				return true;
+			if (str == endptr)
+				goto err;
 
-			curr = endptr;
+			str = endptr;
 			isopr = true;
 			n_push(tkd);
 		}
-		if (par_c) return true;
-		while (!op_empty()) {
+		if (par_c) goto err;
+		while (op_head>=op_sk) {
 			eval(op_top());
 			op_pop();
 		}
 
-		res = n_top();
-		return false;
+		error = false;
+		return n_top();
+err:
+		error = true;
+		return -1.0;
 	}
 
-	double Eval(const char *str, bool &error)
-	{
-		error = parse(str);
-		if (error)
-			return -1.0;
-		return res;
-	}
 }
