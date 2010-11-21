@@ -2,7 +2,7 @@
  * -- hw4 version 5 --
  * Revised from version 3,
  * this version uses a custom number parsing subroutine
- * to overcome the bottleneck detected by callgrind.
+ * to overcome the bottleneck detected by valgrind.
  * Surprisingly, this improves performance very much.
  * -------------------
  * I_refs	=108316
