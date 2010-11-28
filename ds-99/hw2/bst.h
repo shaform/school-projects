@@ -1,8 +1,9 @@
 /**
- * -- hw4 version 3 --
+ * -- hw2 version 3 --
  * Taking advantage of the original design,
  * this version uses a binary search tree instead of
  * a list to keep track of free memory.
+ * However, it failed to get better performance.
  *
  *
  * 
@@ -36,18 +37,18 @@ namespace HOMEWORK
 
 	ptn root, tail;
 
-	static ptn get_ptn(void *addr) { return (ptn )((addr_t ) addr - HEADER); }
-	static void* get_mem(ptn u) { return (void *) ((addr_t )u + HEADER); }
-	static void set_second_size(ptn ptr) {
+	inline ptn get_ptn(void *addr) { return (ptn )((addr_t ) addr - HEADER); }
+	inline void* get_mem(ptn u) { return (void *) ((addr_t )u + HEADER); }
+	inline void set_second_size(ptn ptr) {
 		sz_t sz = ptr->sz;
 		*((sz_t *) ((addr_t )ptr + HEADER + sz)) = sz;
 	}
-	static ptn get_next(ptn u) { return (ptn )((addr_t )u + DATA + u->sz); }
-	static ptn get_prev(ptn u) { return (ptn )((addr_t) u - *((sz_t *) ((addr_t) u-FOOTER)) - DATA); }
+	inline ptn get_next(ptn u) { return (ptn )((addr_t )u + DATA + u->sz); }
+	inline ptn get_prev(ptn u) { return (ptn )((addr_t) u - *((sz_t *) ((addr_t) u-FOOTER)) - DATA); }
 
 
 	// memory pool list
-	static void initialize(ptn u, sz_t sz)
+	inline void initialize(ptn u, sz_t sz)
 	{
 		u->sz = sz;
 		set_second_size(u);
@@ -99,8 +100,8 @@ namespace HOMEWORK
 	*/
 	// free node BST
 	
-	static bool is_top(ptn u) { return u->up->down != u; }
-	static ptn &find_pc(ptn u)
+	inline bool is_top(ptn u) { return u->up->down != u; }
+	inline ptn &find_pc(ptn u)
 	{
 		ptn t = u->up;
 		if (t == root)
@@ -112,7 +113,7 @@ namespace HOMEWORK
 				return t->larger;
 		}
 	}
-	static ptn delete_min(ptn u)
+	inline ptn delete_min(ptn u)
 	{
 		ptn t = u;
 		while (u->lesser != root)
@@ -130,7 +131,7 @@ namespace HOMEWORK
 	}
 
 	// done
-	static void pop(ptn u)
+	inline void pop(ptn u)
 	{
 		ptn &t = u->down;
 
@@ -193,7 +194,7 @@ namespace HOMEWORK
 
 
 	// done
-	static void delete_bst(ptn u)
+	inline void delete_bst(ptn u)
 	{
 		if (is_top(u))
 			pop(u);
@@ -212,7 +213,7 @@ namespace HOMEWORK
 	}
 
 	// done
-	static void insert_bst(ptn u)
+	inline void insert_bst(ptn u)
 	{
 		/* the first node */
 		if (root->up == root) {
@@ -262,21 +263,21 @@ namespace HOMEWORK
 	}
 
 	// Free list
-	static ptn merge(ptn u, ptn v)
+	inline ptn merge(ptn u, ptn v)
 	{
 		// Assuming that u's data is right & u, v are not in the list.
 		initialize(u, u->sz + v->sz + DATA);
 
 		return u;
 	}
-	static void delete_f(ptn u) { u->down = ACQUIRED;
+	inline void delete_f(ptn u) { u->down = ACQUIRED;
 		//check_bst();
 	}
-	static bool is_free(ptn u) { return u->down != ACQUIRED; }
-	static bool in_lst(ptn u) { return u->down != NOTINLIST; }
+	inline bool is_free(ptn u) { return u->down != ACQUIRED; }
+	inline bool in_lst(ptn u) { return u->down != NOTINLIST; }
 
 
-	static ptn insert_f(ptn u)
+	inline ptn insert_f(ptn u)
 	{
 
 		ptn s = get_prev(u);
@@ -342,7 +343,6 @@ namespace HOMEWORK
 			if (it->sz >= nSize) {
 				got = it;
 				it = it->lesser;
-				break;
 			} else
 				it = it->larger;
 		}
