@@ -4,13 +4,11 @@
  * this version uses a binary search tree instead of
  * a list to keep track of free memory.
  * However, it failed to get better performance.
- *
- *
  * 
  * -------------------
- * I_refs	=
- * m_total	=
- * priority	=
+ * I_refs	=5692533
+ * m_total	=11621
+ * priority	=3.957
  * -------------------
  */
 #include <cstdio>

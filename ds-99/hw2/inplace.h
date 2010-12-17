@@ -1,3 +1,14 @@
+/**
+ * -- hw2 version 1 --
+ * This version puts the size info into
+ * this memory pool to minimize memory usauge.
+ * 
+ * -------------------
+ * I_refs	=46168958
+ * m_total	=9717
+ * priority	=1.631
+ * -------------------
+ */
 #pragma once
 
 namespace HELPER

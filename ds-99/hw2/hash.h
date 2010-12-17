@@ -1,12 +1,14 @@
 /**
- * -- hw2 version 2 --
- * This version puts all data into memory pool,
- * and includes many optimizations.
+ * -- hw2 version 4 --
+ * This version uses hash to split free lists.
+ * By carefully selecting the hash,
+ * it successfully surpasses the performance of
+ * the Buddy System slightly in these test cases.
  * 
  * -------------------
- * I_refs	=4858019
- * m_total	=10280
- * priority	=4.555
+ * I_refs	=3542760
+ * m_total	=10937
+ * priority	=5.171
  * -------------------
  */
 #pragma once
@@ -21,6 +23,7 @@ namespace HOMEWORK
 	// Node management
 	struct header { sz_t sz, up, down, larger, lesser; }; 
 	
+
 	const int HEADER = sizeof(header);
 	const int FOOTER = sizeof(sz_t);
 	const int DATA = HEADER + FOOTER;
@@ -28,8 +31,33 @@ namespace HOMEWORK
 	const int LOW = BOUND;
 	const ptn ACQUIRED = 0u;
 	const ptn NOTINLIST = ACQUIRED-1u;
+	const ptn BOTTOM = NOTINLIST-1u;
 
-	ptn root, tail;
+	// hash
+	const int BUF_SZ = 7;
+
+	//3560000
+	sz_t POW2[BUF_SZ]  = {0, 100, 200, 300, 500, 1500, 5000}; // 3542760
+
+
+	/*
+	static void init_hash()
+	{
+		int sz = DATA;
+		for (int i=0; i<BUF_SZ; ++i)
+			POW2[i] = (sz*=4);
+	}
+	*/
+
+	static int hash(sz_t sz)
+	{
+		int i;
+		for (i=BUF_SZ-1; POW2[i] > sz; --i);
+
+		return i;
+	}
+
+	ptn root[BUF_SZ], tail;
 
 	static ptn get_ptn(void *addr) { return ((sz_t ) addr) - HEADER; }
 	static void* get_mem(ptn u) { return (void *) (u + HEADER); }
@@ -45,29 +73,6 @@ namespace HOMEWORK
 	static ptn get_next(ptn u) { return u + DATA + get_size(u); }
 	static ptn get_prev(ptn u) { return u - *((sz_t *) (u-FOOTER)) - DATA; }
 
-#if DEBUG
-#include <cstdio>
-	void check_list()
-	{
-		using namespace std;
-		ptn it = root;
-		while (it != tail) {
-			printf("#%llu : %llu\n", it, get_size(it));
-			it = get_next(it);
-		}
-		it = get_larger(root);
-		while (it != root) {
-			ptn it2 = it;
-			printf("#size: %llu\n", get_size(it));
-			while (it2 != root) {
-				printf("#%llu : %llu\n", it2, get_size(it2));
-				it2 = get_down(it2);
-			}
-			it = get_larger(it);
-		}
-
-	}
-#endif
 
 	static void initialize(ptn u, sz_t sz)
 	{
@@ -78,15 +83,15 @@ namespace HOMEWORK
 
 	// Free list
 	
-	static bool is_top(ptn u) { return get_up(u) == root; }
+	static bool is_top(ptn u) { return get_up(u) == BOTTOM; }
 
 	static void pop(ptn u)
 	{
 		ptn &t = get_down(u);
-		get_up(t) = root;
+		if (t != BOTTOM) get_up(t) = BOTTOM;
 
 		ptn larger = get_larger(u), lesser = get_lesser(u);
-		if (t == root) {
+		if (t == BOTTOM) {
 			get_larger(lesser) = larger;
 			get_lesser(larger) = lesser;
 		} else {
@@ -110,17 +115,17 @@ namespace HOMEWORK
 
 			get_down(up) = down;
 
-			if (down != root)
+			if (down != BOTTOM)
 				get_up(down) = up;
 
 
 			get_down(u) = NOTINLIST;
 		}
 	}
-	static void insert_lst(ptn u)
+	static void insert_lst(ptn u, int h)
 	{
 		sz_t sz = get_size(u), itsz;
-		ptn it = get_lesser(root);
+		ptn it = get_lesser(root[h]);
 
 		while ((itsz = get_size(it)) > sz)
 			it = get_lesser(it);
@@ -134,7 +139,7 @@ namespace HOMEWORK
 
 			get_down(it) = u;
 
-			if (nd!=root)
+			if (nd!=BOTTOM)
 				get_up(nd) = u;
 		} else {
 			ptn larger = get_larger(it);;
@@ -145,8 +150,8 @@ namespace HOMEWORK
 			
 			get_larger(it) = u;
 			get_lesser(larger) = u;
-			get_down(u) = root;
-			get_up(u) = root;
+			get_down(u) = BOTTOM;
+			get_up(u) = BOTTOM;
 
 		}
 	}
@@ -166,7 +171,7 @@ namespace HOMEWORK
 
 	static ptn insert_f(ptn u)
 	{
-		get_down(u) = root;
+		get_down(u) = NOTINLIST;
 
 		ptn s = get_prev(u);
 
@@ -192,70 +197,82 @@ namespace HOMEWORK
 
 	static void initialize_pool(void* addr, sz_t nSize)
 	{
+		//init_hash();
 
-		nSize -= DATA*3;
+		nSize -= DATA*(BUF_SZ+2);
 
+		ptn it = (ptn ) addr;
 		//Initialize root
-		root = (addr_t ) addr;
-		initialize(root, 0);
-		get_down(root) = ACQUIRED;
+		for (int i=0; i<BUF_SZ; ++i) {
+			root[i] = it;
+			initialize(root[i], 0);
+			get_down(root[i]) = ACQUIRED;
 
+			get_larger(root[i]) = root[i];
+			get_lesser(root[i]) = root[i];
 
-		get_larger(root) = root;
-		get_lesser(root) = root;
+			it = get_next(it);
+		}
 
 		//Initialize memory pool
-		ptn pool = get_next(root);
+		ptn pool = it;
 		initialize(pool, nSize);
-
-		insert_lst(pool);
-
+		insert_lst(pool, hash(nSize));
 
 		//Initialize tail
 		tail = get_next(pool);
 		initialize(tail, 0);
 		get_down(tail) = ACQUIRED;
-
-
-
 	}
 
 	static void* acquire(unsigned long long nSize)
 	{
 
-		ptn it = get_lesser(root);
+		int h = hash(nSize);
 
-		sz_t sz;
-		while ((sz = get_size(it)) > nSize)
+		ptn it;
+
+		it = get_lesser(root[h]);
+
+		while (get_size(it) >= nSize)
 			it = get_lesser(it);
 
 		it = get_larger(it);
+		/*
+		it = get_lesser(root[h]);
+		if (get_size(it) < nSize)
+			it = root[h];
+		 */
 
-		if (it == root)
-			return 0;
+		while (it == root[h] && ++h<BUF_SZ)
+			it = get_larger(root[h]);
 
-		sz = get_size(it);
+		if (h==BUF_SZ) return 0;
+
+
+		sz_t sz = get_size(it);
 
 		pop(it);
 		delete_f(it);
-
 
 		// Split the memory
 		if (sz > nSize+DATA+BOUND) {
 			initialize(it, nSize);
 
 			ptn t = get_next(it);
-			initialize(t, sz-nSize-DATA);
-			get_down(t) = NOTINLIST;
+
+			sz -= nSize + DATA;
+			h = hash(sz);
+
+			initialize(t, sz);
 
 			t = insert_f(t);
 
-			insert_lst(t);
+			insert_lst(t, h);
 		}
 
 		return get_mem(it);
 	}
-
 	static void release(void* addr)
 	{
 		ptn it = get_ptn(addr);
@@ -264,8 +281,8 @@ namespace HOMEWORK
 
 		get_down(it) = NOTINLIST;
 
-		if (get_size(it) > BOUND)
-			insert_lst(it);
+		int sz = get_size(it);
+		if (sz > BOUND)
+			insert_lst(it, hash(sz));
 	}
-
 }
