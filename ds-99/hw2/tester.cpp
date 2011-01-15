@@ -3,7 +3,7 @@
 #include <vector>
 #include <ctime>
 #include <cstdlib>
-#include "allpool.h"
+#include "hash.h"
 using namespace std;
 using HOMEWORK::initialize_pool;
 using HOMEWORK::acquire;

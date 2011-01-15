@@ -1,9 +1,6 @@
 /**
  * -- hw2 version 4 --
  * This version uses hash to split free lists.
- * By carefully selecting the hash,
- * it successfully surpasses the performance of
- * the Buddy System slightly in these test cases.
  * 
  * -------------------
  * I_refs	=3542760
