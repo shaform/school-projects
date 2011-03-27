@@ -3,7 +3,7 @@ TITLE	Display the prime numbers smaller than N (prime.asm)
 INCLUDE Irvine32.inc
 
 .data
-PROMPT	BYTE	"Enter a positive number N <= 9999 to get primes numbers smaller than N,",0dh,0ah,
+PROMPT	BYTE	"Enter a positive number N < 10000 to get prime numbers smaller than N,",0dh,0ah,
 		"or enter 0 to terminate the process.",0dh,0ah,0
 PRN	BYTE	"N = ",0
 NX	BYTE	", ",0
@@ -15,17 +15,29 @@ MAXP	=	10000
 cp_tab	BYTE	MAXP	DUP(0)		; cp_tab[i] is true if i is composite.
 primes	DWORD	MAXP	DUP(0)		; Table of primes, terminated by 0
 
-
-
-
 .code
+
 ;--------------------------------------------------------------------------------
-GenPrimes PROC
+mPuts MACRO pts
+; Prints a string to the terminal.
+;
+; Receives: pts, the offset to the string.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+	push	edx
+	mov	edx, pts
+	call	WriteString
+	pop	edx
+ENDM
+
+;--------------------------------------------------------------------------------
+GenPrimes PROC USES eax ecx edx esi edi
 ; Generates prime numbers and store them in primes[].
 ;
-; Receives: nothing.
+; Receives: Nothing.
 ;
-; Returns: nothing.
+; Returns: Nothing.
 ;--------------------------------------------------------------------------------
 	mov	esi, OFFSET cp_tab + 2	; We checks primes from 2.
 	mov	ecx, 2
@@ -38,29 +50,27 @@ GenPrimes PROC
 
 l_GP_LOOP:
 	cmp	eax, MAXP
-	jae	l_GP_LOOP_END	; Breaks if eax >= MAXP.
+	jae	l_GP_LOOP_END		; Jumps if eax >= MAXP.
 	
 	test	BYTE PTR [esi], 1
-	jnz	l_GP_LOOP_CON
+	jnz	l_GP_LOOP_CON		; Jumps if it is composite.
 
 	mov	[edi], ecx		; Stores the prime in primes[].
 	add	edi, TYPE primes
 
 
 	; Crosses out composites.
-	mov	ebx, eax
 	add	eax, OFFSET cp_tab
 l_GP_CROSS:
-	mov	BYTE PTR [eax], 1
-
+	mov	BYTE PTR [eax], 1	; Marks it as composite.
 	add	eax, ecx
 	cmp	eax, MAXP + OFFSET cp_tab
-	jb	l_GP_CROSS		; Breaks if eax >= cp_tab[MAXP].
+	jb	l_GP_CROSS		; Breaks if eax >= &cp_tab[MAXP].
 ; End of l_GP_CROSS.
 
 
 l_GP_LOOP_CON:
-	inc	ecx
+	inc	ecx			; Checks next number.
 	inc	esi
 	mov	eax, ecx
 	mul	eax
@@ -81,7 +91,7 @@ l_GP_ODD:
 l_GP_ENDLOOP:
 	test	BYTE PTR [esi], 1
 	jnz	l_GP_ENDLOOP_CON	; Jumps if not prime.
-	mov	[edi], ecx		; Stores the prime in [ebx];
+	mov	[edi], ecx		; Stores the prime in [edi];
 	add	edi, TYPE primes
 
 l_GP_ENDLOOP_CON:
@@ -98,51 +108,41 @@ main PROC
 
 	call GenPrimes
 l_MLOOP:
-	mov	edx, OFFSET PROMPT
-	call	WriteString 
+	mPuts	OFFSET PROMPT
 
 	; Read N
-	mov	edx, OFFSET PRN
-	call	WriteString 
+	mPuts	OFFSET PRN
 	call	ReadDec
 
 	cmp	eax, 0
-	jz	l_TERM			; Terminates if N = 0.
+	je	l_TERM			; Terminates if N = 0.
 	mov	edi, eax
 
-	mov	edx, OFFSET RESULT
-	call	WriteString 
+	mPuts	OFFSET RESULT
 
-
-	; Prints out all primes < edi
+	; Prints out all primes < N
 	mov	esi, OFFSET primes + TYPE primes
 	cmp	edi, 2
 	jbe	l_PRINT_END
 	mov	eax, 2
 	call	WriteDec		; Prints 2 first.
+
 l_PRINT:
 	cmp	DWORD PTR [esi], 0
-	jz	l_PRINT_END
+	je	l_PRINT_END		; Jumps if there are no primes left.
 	cmp	[esi], edi
-	jae	l_PRINT_END
+	jae	l_PRINT_END		; Jumps if the prime >= N.
 
-	mov	edx, OFFSET NX
-	call	WriteString 
+	mPuts	OFFSET NX
 	
 	mov	eax, [esi]
 	call	WriteDec		; Prints the prime in eax.
-	add	esi, TYPE primes
+	add	esi, TYPE primes	; Advances to the next prime.
 	
 	jmp	l_PRINT
 
 l_PRINT_END:
-	call Crlf
-
-
-	mov	ecx, edi
-	mov	esi, OFFSET cp_tab
-	add	esi, edi
-
+	call	Crlf
 	jmp	l_MLOOP			; Loops to read next N.
 
 l_TERM:
