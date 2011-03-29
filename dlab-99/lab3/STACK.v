@@ -15,22 +15,24 @@ integer ng;
 always @(posedge CLK)
 begin
 	if (RESET) reset();
-	else if (IN_VALID) begin
-		ng = 0;
-		case (OP)
-			1'b0:
-				pop();
-			1'b1:
-				push();
-		endcase
-	end
+	else begin
+		if (IN_VALID) begin
+			ng = 0;
+			case (OP)
+				1'b0:
+					pop();
+				1'b1:
+					push();
+			endcase
+		end
 
-	if (OUT_VALID) begin
-		OUT = 0;
-		OUT_VALID = 0;
-	end else if (ng) begin
-		ng = 0;
-		getresult();
+		if (OUT_VALID) begin
+			OUT = 0;
+			OUT_VALID = 0;
+		end else if (ng) begin
+			ng = 0;
+			getresult();
+		end
 	end
 end
 
