@@ -1,16 +1,14 @@
 module STACK(
 	input CLK, RESET, OP, IN_VALID,
 	input [3:0] IN,
-	output [5:0] OUT,
-	output OUT_VALID
+	output reg [5:0] OUT,
+	output reg OUT_VALID
 );
 
 reg [3:0] stack[3:0];
-reg OUT_VALID;
-reg OUT;
 integer top = -1;
 integer i;
-integer ng;
+reg ng;
 
 always @(posedge CLK)
 begin
