@@ -17,7 +17,7 @@ begin
 	if (RESET) reset();
 	else begin
 		if (IN_VALID) begin
-			ng = 0;
+			ng = 1;
 			case (OP)
 				1'b0:
 					pop();
@@ -29,17 +29,13 @@ begin
 		if (OUT_VALID) begin
 			OUT = 0;
 			OUT_VALID = 0;
-		end else if (ng) begin
+		end else if (!IN_VALID && ng) begin
 			ng = 0;
 			getresult();
 		end
 	end
 end
 
-always @(negedge IN_VALID)
-begin
-	ng = 1;
-end
 
 task pop;
 	begin
