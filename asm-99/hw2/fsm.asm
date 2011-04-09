@@ -2,8 +2,8 @@ TITLE   Finite State Machine to Read Assembly Code (fsm.asm)
 
 INCLUDE Irvine32.inc
 
-MAX = 1000
-ADDON = 1
+MAX = 1000                                               ; Maximum size for input buffer.
+ADDON = 1                                                ; Special check for syntax error.
 
 .data
 PROMPT          BYTE    "Input the assembly source code=> ", 0
@@ -35,13 +35,33 @@ RESERVED        BYTE    "mov", 5 DUP(0),"movsx", 3 DUP(0),"add", 5 DUP(0),"sub",
                 BYTE    "si", 6 DUP(0),"di", 6 DUP(0),"bp", 6 DUP(0),"sp", 6 DUP(0)
                 BYTE    "cs", 6 DUP(0),"ds", 6 DUP(0),"ss", 6 DUP(0),"es", 6 DUP(0),"fs", 6 DUP(0),"gs", 6 DUP(0)
                 BYTE    "comment",0
-LENR = ($-RESERVED)/(TYPE BYTE * 6)
+SIZER = TYPE BYTE * 8
+LENR = ($-RESERVED)/SIZER
+
 ENDIF
 
 src             BYTE    MAX DUP(0), 0
 buffer          BYTE    MAX DUP(0), 0
 
 .code
+
+
+; main program to process input.
+main PROC
+L1:
+        mov     edx, OFFSET PROMPT
+        call    WriteString
+        mov     edx, OFFSET src
+        mov     ecx, LENGTHOF src
+        call    ReadString
+        cmp     eax, 0                                   ; Breaks if there is no input.
+        je      DONE
+        call    FSM
+
+        jmp     L1
+DONE:
+        exit
+main ENDP
 
 ;--------------------------------------------------------------------------------
 mPuts MACRO pts
@@ -56,23 +76,6 @@ mPuts MACRO pts
         call    WriteString
         pop     edx
 ENDM
-
-main PROC
-L1:
-        mov     edx, OFFSET PROMPT
-        call    WriteString
-        mov     edx, OFFSET src
-        mov     ecx, LENGTHOF src
-        call    ReadString
-        cmp     eax, 0
-        je      DONE
-        call    FSM
-
-        jmp     L1
-DONE:
-        exit
-main ENDP
-
 
 ;--------------------------------------------------------------------------------
 mNext MACRO
@@ -139,7 +142,7 @@ mIsI MACRO char
 ;--------------------------------------------------------------------------------
         push    eax
         mov     al, [edx]
-        or      al, 00100000b
+        or      al, 00100000b                            ; Transforms al to lower case.
         cmp     al, char
         pop     eax
 ENDM
@@ -164,7 +167,7 @@ SkipSpaces ENDP
 
 IFDEF   ADDON
 ;--------------------------------------------------------------------------------
-IsID PROC
+IsID PROC uses ebx edx ecx esi
 ; Checks if the buffer string is a reserved word.
 ;
 ; Receives: Nothing.
@@ -172,9 +175,32 @@ IsID PROC
 ; Returns: Zero flag is set if it is.
 ;          Carry flag may be modified.
 ;--------------------------------------------------------------------------------
-        or      edi, edi
-        
+        mov     ecx, LENR
+        mov     ebx, 0
 
+l_II:                                                    ; Loops for every reserved word.
+        mov     edx, OFFSET buffer
+        mov     esi, 0
+l_II2:                                                   ; Loops to check character by character.
+        cmp     BYTE PTR [edx], 0
+        jne     l_II2@
+        cmp     RESERVED[ebx + esi], 0
+        je      l_II_RET
+l_II2@:
+        mIsI    RESERVED[ebx + esi]
+        jne     l_II2BK
+
+        inc     esi
+        inc     edx
+        jmp     l_II2
+l_II2BK:
+
+        add     ebx, SIZER
+        loop    l_II
+
+        or      edx, edx
+
+l_II_RET:
         ret
 IsID ENDP
 
@@ -285,7 +311,7 @@ IsNext ENDP
 
 
 ;--------------------------------------------------------------------------------
-FSM PROC uses edx edi
+FSM PROC uses edx edi eax
 ; A finite state machine to recognize assembly code.
 ;
 ; Receives: EDX, the pointer to the source code string.
@@ -297,6 +323,7 @@ IFDEF   ADDON
         ; Auxiliary variable for additional error checking.
         LOCAL   lb:BYTE, incn:BYTE, nown:BYTE
         mov     lb, 0
+        mov     incn, 0
 ENDIF
 
 ; Initialization
@@ -312,6 +339,8 @@ ST_BEGIN:
 
 ; Checks label and operator.
 ST_FIRST:
+        mIsI    'c'
+        je      ST_C
         mIsI    'm'
         je      ST_M
         mIsI    'a'
@@ -358,6 +387,48 @@ ST_CK1:
         jmp     ST_ERRIC
 
 ; mov movsx add sub mul div inc dec jmp loop ret
+ST_C:
+IFDEF   ADDON
+        ; Additional check for invaild comment.
+        cmp     lb, 1
+        je      ST_FIRSTC
+ENDIF
+        mCopy
+        mIsI    'o'
+        je      ST_CO
+        jmp     ST_CK1
+ST_CO:
+        mCopy
+        mIsI    'm'
+        je      ST_COM
+        jmp     ST_CK1
+ST_COM:
+        mCopy
+        mIsI    'm'
+        je      ST_COMM
+        jmp     ST_CK1
+ST_COMM:
+        mCopy
+        mIsI    'e'
+        je      ST_COMME
+        jmp     ST_CK1
+ST_COMME:
+        mCopy
+        mIsI    'n'
+        je      ST_COMMEN
+        jmp     ST_CK1
+ST_COMMEN:
+        mCopy
+        mIsI    't'
+        je      ST_COMMENT
+        jmp     ST_CK1
+ST_COMMENT:
+        mCopy
+        mIs     ' '
+        je      ST_SCOMMENT
+        jmp     ST_CK1
+
+; States for instructions recognization.
 ST_M:
         mCopy
         mIsI    'o'
@@ -473,14 +544,16 @@ ST_RE:
         jmp     ST_CK1
 
 
+; Instructions with only 1 operand.
 ST_INC1:
 IFDEF   ADDON
-        mov     incn, 1
+        mov     al, 1
         jmp     ST_INC
 ENDIF
+; Instructions with only 2 operands.
 ST_INC2:
 IFDEF   ADDON
-        mov     incn, 2
+        mov     al, 2
 ENDIF
 
 ST_INC:
@@ -491,6 +564,9 @@ ST_INC:
         call    IsBreak
         jne     ST_CK1
 
+IFDEF   ADDON
+        mov     incn, al
+ENDIF
         mPuts   OFFSET STRINC
         mEnd
         mPuts   OFFSET buffer
@@ -500,6 +576,7 @@ IFDEF   ADDON
         mov     nown, 0
 ENDIF
         jmp     ST_OPER
+; Recognized registers:
 ; eax ax ah al
 ; ebx bx bh bl
 ; ecx cx ch cl
@@ -544,8 +621,8 @@ ST_OPER:
         mIsDigit
         je      ST_INT
         call    IsBreak
-        je      ST_ERRNOOPER
-        jmp     ST_ERRIC
+        je      ST_ERRNOOPER                             ; No operands found, error!
+        jmp     ST_ERRIC                                 ; Strange character is found!
 
 ST_IDEN:
         mCopy
@@ -553,13 +630,15 @@ ST_IDEN:
         je      ST_IDEN
 
         call    IsBreak
-        jne     ST_ERRINC
+        jne     ST_ERRIC                                 ; Strange character is found!
 
         mEnd
 IFDEF   ADDON
+        ; Special checks for reserved words.
         call    IsID
         je      ST_ERRID
 
+        ; Special checks for number of operands.
         cmp     incn, 0
         je      ST_ERRNUM
         dec     incn
@@ -579,6 +658,7 @@ ST_INT:
 
         mEnd
 IFDEF ADDON
+        ; Special checks for ingeter constant in the first operand.
         cmp     nown, 0
         je      ST_ERROPER
         inc     nown
@@ -602,6 +682,7 @@ ST_CK2:
         dec     edi
         jmp     ST_IDEN
 
+; States for registers recognization.
 ST_IE:
         mCopy
         mIsI    'a'
@@ -726,6 +807,7 @@ ENDIF
 
 
 
+; Treats ret instruction as a special case.
 ST_RET:
         mCopy
         mIs     ':'
@@ -765,7 +847,7 @@ ST_RET@END:
         je      ST_BCOMMENT
 
         jmp     ST_ERROPER
-        
+
 
 ST_LABEL:
 IFDEF   ADDON
@@ -773,8 +855,14 @@ IFDEF   ADDON
         cmp     lb, 1
         je      ST_ERRMLB
         mov     lb, 1
+
+        ; Additional check for reserved words.
+
+        mov     BYTE PTR [edi], 0
+        call    IsID
+        je      ST_ERRID
 ENDIF
-        
+
         mPuts   OFFSET STRLABEL
         mEnd
         mPuts   OFFSET buffer
@@ -783,6 +871,7 @@ ENDIF
         mNext
         jmp     ST_BEGIN
 
+; All kinds of errors.
 ST_ERRNOOPER:
         mPuts   OFFSET STRERRNOOPER
         jmp     ST_LB
@@ -809,6 +898,38 @@ ST_ERRIC:
         jmp     ST_LB
 ST_ERRID:
         mPuts   OFFSET STRERRID
+        jmp     ST_LB
+
+; Special comment treatments.
+ST_SCOMMENT:
+        mEnd
+        call    SkipSpaces
+ST_SCCOMMENT:
+        mIs     0
+        je      ST_SCCOMMENT@END                         ; Checks if there is no input.
+        mCopy
+        jmp     ST_SCCOMMENT
+
+ST_SCCOMMENT@END:
+        mEnd
+        mov     dl, [buffer]
+        mov     edi, OFFSET buffer
+
+ST_SCCOMMENT@ENDL:
+        inc     edi
+        cmp     dl, [edi]
+        je      ST_SCCOMMENT@END2
+        cmp     BYTE PTR [edi], 0
+        je      ST_SCCOMMENT@END2
+        jmp     ST_SCCOMMENT@ENDL
+
+ST_SCCOMMENT@END2:
+        mov     BYTE PTR [edi], 0
+        mov     edi, OFFSET buffer + 1
+        mPuts   OFFSET STRCOMMENT
+        mPuts   edi
+
+
         jmp     ST_LB
 
 ST_BCOMMENT:
