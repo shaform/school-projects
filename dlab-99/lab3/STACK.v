@@ -9,7 +9,6 @@ reg [3:0] stack[3:0];
 integer top = -1;
 integer i;
 reg ng;
-
 always @(posedge CLK)
 begin
 	if (RESET) reset();
@@ -37,7 +36,10 @@ end
 
 task pop;
 	begin
-		if (top > -1) top = top - 1;
+		if (top > -1) begin
+			stack[top] = 0;
+			top = top - 1;
+		end
 	end
 endtask
 
@@ -55,8 +57,7 @@ task getresult;
 		OUT = 0;
 		if (top > -1) begin
 			OUT_VALID = 1;
-			for (i=0; i<=top; i = i + 1)
-				OUT = OUT + stack[i];
+			OUT = stack[0] + stack[1] + stack[2] + stack[3];
 		end else
 			OUT_VALID = 0;
 	end
@@ -68,6 +69,10 @@ task reset;
 		top = -1;
 		OUT_VALID = 0;
 		OUT = 0;
+		stack[0] = 0;
+		stack[1] = 0;
+		stack[2] = 0;
+		stack[3] = 0;
 	end
 endtask
 
