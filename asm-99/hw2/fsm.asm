@@ -14,6 +14,7 @@ STRREG          BYTE    "REGISTER          ", 0
 STRID           BYTE    "IDENTIFIER        ", 0
 STRCOMMENT      BYTE    "COMMENT           ", 0
 STRINTEGER      BYTE    "INTEGER CONSTANT  ", 0
+STRUNKNOWN      BYTE    "UNKNOWN           ", 0
 
 STRERRMLB       BYTE    "[Error] Multiple labels detected.", 0
 STRERRID        BYTE    "[Error] Reserved word cannot name a identifier.", 0
@@ -360,7 +361,14 @@ ST_FIRST:
 
         ; Checks if the first character is valid.
         call    IsBeg
-        jne     ST_ERRIC
+        je      ST_FIRSTC
+        mPuts   OFFSET STRERRINC
+        call    Crlf
+        call    IsBeg
+        je      ST_OPER
+        mIsDigit
+        je      ST_INT
+        jmp     ST_LB
 
 ; No operator is possible, reads the identifier.
 ST_FIRSTC:
@@ -369,8 +377,14 @@ ST_FIRSTC:
         je      ST_FIRSTC
 
         mIs     ':'
-        jne     ST_ERRINC
-        jmp     ST_LABEL
+        je      ST_LABEL
+        mPuts   OFFSET STRERRINC
+        call    Crlf
+        call    IsBreak
+        jne     ST_LB
+        dec     edi
+        dec     edx
+        jmp     ST_IDEN
 
 
 ; Common check for indentifier.
@@ -559,7 +573,13 @@ ENDIF
 ST_INC:
         mCopy
         mIs     ':'
-        je      ST_ERRID
+        jne     ST_INC@NOID
+IFNDEF  ADDON
+        mPuts   OFFSET STRERRID
+        call    Crlf
+ENDIF
+        jmp     ST_LABEL
+ST_INC@NOID:
 
         call    IsBreak
         jne     ST_CK1
@@ -593,10 +613,15 @@ ST_SECOND:
         mIs     0
         je      ST_END
         mIs     ','
-        jne     ST_ERROPER
+        je      ST_SECOND@NOERROPER
+        mPuts   OFFSET STRERROPER
+        call    Crlf
+        jmp     ST_BEGIN
+ST_SECOND@NOERROPER:
         mNext
 
 ST_OPER:
+        ; Checks for registers.
         call    SkipSpaces
         mIsI    'e'
         je      ST_IE
@@ -636,11 +661,17 @@ ST_IDEN:
 IFDEF   ADDON
         ; Special checks for reserved words.
         call    IsID
-        je      ST_ERRID
+        jne     ST_IDEN@NOID
+        mPuts   OFFSET STRERRID
+        call    Crlf
+ST_IDEN@NOID:
 
         ; Special checks for number of operands.
         cmp     incn, 0
-        je      ST_ERRNUM
+        jne     ST_IDEN@NOIOP
+        mPuts   OFFSET STRERRNUM
+        call    Crlf
+ST_IDEN@NOIOP:
         dec     incn
         inc     nown
 ENDIF
@@ -660,7 +691,10 @@ ST_INT:
 IFDEF ADDON
         ; Special checks for ingeter constant in the first operand.
         cmp     nown, 0
-        je      ST_ERROPER
+        jne      ST_INT@NOERROPER
+        mPuts   OFFSET STRERROPER
+        call    Crlf
+ST_INT@NOERROPER:
         inc     nown
         dec     incn
 ENDIF
@@ -846,21 +880,31 @@ ST_RET@END:
         mIs     ';'
         je      ST_BCOMMENT
 
-        jmp     ST_ERROPER
+        mPuts   OFFSET STRERROPER
+        call    Crlf
+        jmp     ST_OPER
 
 
 ST_LABEL:
+        
 IFDEF   ADDON
-        ; Additional check for multiple labels.
-        cmp     lb, 1
-        je      ST_ERRMLB
-        mov     lb, 1
-
         ; Additional check for reserved words.
 
         mov     BYTE PTR [edi], 0
         call    IsID
-        je      ST_ERRID
+        jne     ST_LABEL@NOID
+        mPuts   OFFSET STRERRID
+        call    Crlf
+ST_LABEL@NOID:
+
+        ; Additional check for multiple labels.
+        cmp     lb, 1
+        jne     ST_LABEL@NOMLB
+        mPuts   OFFSET STRERRMLB
+        call    Crlf
+ST_LABEL@NOMLB:
+        mov     lb, 1
+
 ENDIF
 
         mPuts   OFFSET STRLABEL
@@ -868,6 +912,9 @@ ENDIF
         mPuts   OFFSET buffer
         call    Crlf
 
+        mNext
+        mIs     ':'
+        jne     ST_BEGIN
         mNext
         jmp     ST_BEGIN
 
@@ -890,9 +937,6 @@ ST_ERRDIGIT:
 ST_ERRINC:
         mPuts   OFFSET STRERRINC
         jmp     ST_LB
-ST_ERRMLB:
-        mPuts   OFFSET STRERRMLB
-        jmp     ST_LB
 ST_ERRIC:
         mPuts   OFFSET STRERRIC
         jmp     ST_LB
@@ -913,12 +957,12 @@ ST_SCCOMMENT:
 ST_SCCOMMENT@END:
         mEnd
         mov     dl, [buffer]
-        mov     edi, OFFSET buffer
+        mov     edi, OFFSET buffer                       ; Rescan the buffer to extract the comment.
 
 ST_SCCOMMENT@ENDL:
         inc     edi
         cmp     dl, [edi]
-        je      ST_SCCOMMENT@END2
+        je      ST_SCCOMMENT@END2                        ; Stops at the ending character.
         cmp     BYTE PTR [edi], 0
         je      ST_SCCOMMENT@END2
         jmp     ST_SCCOMMENT@ENDL
@@ -928,10 +972,12 @@ ST_SCCOMMENT@END2:
         mov     edi, OFFSET buffer + 1
         mPuts   OFFSET STRCOMMENT
         mPuts   edi
+        mEnd
 
 
         jmp     ST_LB
 
+; Normal comment treatment.
 ST_BCOMMENT:
         mNext
 ST_CCOMMENT:
@@ -946,6 +992,21 @@ ST_CCOMMENT@END:
 
 ST_LB:
         call    Crlf
+
+        call    IsBreak
+        je      ST_END
+
+; Reports unknown syntax error.
+ST_UNKNOWN:
+        mCopy
+        call    IsBreak
+        jne     ST_UNKNOWN
+        mEnd
+        mPuts   OFFSET STRUNKNOWN
+        mPuts   OFFSET buffer
+        call    Crlf
+        jmp     ST_BEGIN
+
 ST_END:
 IFDEF   ADDON
         cmp     incn, 0
