@@ -364,8 +364,6 @@ ST_FIRST:
         je      ST_FIRSTC
         mPuts   OFFSET STRERRINC
         call    Crlf
-        call    IsBeg
-        je      ST_OPER
         mIsDigit
         je      ST_INT
         jmp     ST_LB
@@ -378,13 +376,21 @@ ST_FIRSTC:
 
         mIs     ':'
         je      ST_LABEL
+        mov     eax, edx
+        call    SkipSpaces
+        mIs     ':'
+        je      ST_LABEL
+        mov     edx, eax
         mPuts   OFFSET STRERRINC
         call    Crlf
         call    IsBreak
         jne     ST_LB
+ST_FIRSTC@NOL:
         dec     edi
         dec     edx
-        jmp     ST_IDEN
+        cmp     edi, OFFSET buffer
+        jne     ST_FIRSTC@NOL
+        jmp     ST_OPER
 
 
 ; Common check for indentifier.
@@ -396,9 +402,12 @@ ST_CK1:
         je      ST_LABEL
 
         call    IsBreak
-        je      ST_ERRINC
+        jne     ST_ERRIC
+        call    SkipSpaces
+        mIs     ':'
+        je      ST_LABEL
 
-        jmp     ST_ERRIC
+        jmp     ST_ERRINC
 
 ; mov movsx add sub mul div inc dec jmp loop ret
 ST_C:
@@ -574,15 +583,20 @@ ST_INC:
         mCopy
         mIs     ':'
         jne     ST_INC@NOID
-IFNDEF  ADDON
         mPuts   OFFSET STRERRID
         call    Crlf
-ENDIF
         jmp     ST_LABEL
 ST_INC@NOID:
 
         call    IsBreak
         jne     ST_CK1
+        call    SkipSpaces
+        mIs     ':'
+        jne     ST_INC@NOID2
+        mPuts   OFFSET STRERRID
+        call    Crlf
+        jmp     ST_LABEL
+ST_INC@NOID2:
 
 IFDEF   ADDON
         mov     incn, al
@@ -654,16 +668,25 @@ ST_IDEN:
         call    IsNext
         je      ST_IDEN
 
+        mIs     ':'
+        je      ST_ERROPER
         call    IsBreak
         jne     ST_ERRIC                                 ; Strange character is found!
 
-        mEnd
+        mov     BYTE PTR [edi], 0
 IFDEF   ADDON
         ; Special checks for reserved words.
         call    IsID
         jne     ST_IDEN@NOID
         mPuts   OFFSET STRERRID
         call    Crlf
+ST_IDEN@NOL:
+        dec     edi
+        dec     edx
+        cmp     edi, OFFSET buffer
+        jne     ST_IDEN@NOL
+        jmp     ST_BEGIN
+
 ST_IDEN@NOID:
 
         ; Special checks for number of operands.
@@ -674,7 +697,10 @@ ST_IDEN@NOID:
 ST_IDEN@NOIOP:
         dec     incn
         inc     nown
+
 ENDIF
+        mEnd
+
         mPuts   OFFSET STRID
         mPuts   OFFSET buffer
         call    Crlf
@@ -709,6 +735,8 @@ ST_CK2:
         call    IsNext
         je      ST_IDEN
 
+        mIs     ':'
+        je      ST_ERROPER
         call    IsBreak
         jne     ST_ERRIC
 
@@ -727,6 +755,8 @@ ST_IE:
         je      ST_IEX
         mIsI    'd'
         je      ST_IED
+        mIsI    's'
+        je      ST_IES
 
         jmp     ST_CK2
 ST_IEX:
@@ -758,7 +788,11 @@ ST_IES:
         mIsI    'p'
         je      ST_IREG
 
-        jmp     ST_CK2
+        call    IsBreak
+        jne     ST_CK2
+        dec     edx
+        dec     edi
+        jmp     ST_IREG
 ST_IA:
         mCopy
         mIsI    'x'
@@ -812,6 +846,8 @@ ST_IS:
         mIsI    'i'
         je      ST_IREG
         mIsI    'p'
+        je      ST_IREG
+        mIsI    's'
         je      ST_IREG
 
         jmp     ST_CK2
@@ -930,7 +966,10 @@ ENDIF
         jmp     ST_LB
 ST_ERROPER:
         mPuts   OFFSET STRERROPER
-        jmp     ST_LB
+        mIs     ':'
+        jne     ST_LB
+        call    Crlf
+        jmp     ST_LABEL
 ST_ERRDIGIT:
         mPuts   OFFSET STRERRDIGIT
         jmp     ST_LB
@@ -939,7 +978,11 @@ ST_ERRINC:
         jmp     ST_LB
 ST_ERRIC:
         mPuts   OFFSET STRERRIC
-        jmp     ST_LB
+        mIs     ':'
+        jne     ST_LB
+        call    Crlf
+        jmp     ST_LABEL
+
 ST_ERRID:
         mPuts   OFFSET STRERRID
         jmp     ST_LB
