@@ -79,6 +79,21 @@ mPuts MACRO pts
 ENDM
 
 ;--------------------------------------------------------------------------------
+Back PROC
+; Back the pointer to the buffer beginning.
+;
+; Receives: EDX, the offset to the string.
+;           EDI, the offset to the buffer.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+l_Back:
+        dec     edx
+        dec     edi
+        cmp     edi, OFFSET buffer
+        jne     l_Back
+Back ENDP
+;--------------------------------------------------------------------------------
 mNext MACRO
 ; Advance the pointer to the next char.
 ;
@@ -385,11 +400,7 @@ ST_FIRSTC:
         call    Crlf
         call    IsBreak
         jne     ST_LB
-ST_FIRSTC@NOL:
-        dec     edi
-        dec     edx
-        cmp     edi, OFFSET buffer
-        jne     ST_FIRSTC@NOL
+        call    Back
         jmp     ST_OPER
 
 
@@ -403,19 +414,16 @@ ST_CK1:
 
         call    IsBreak
         jne     ST_ERRIC
+        mov     eax, edx
         call    SkipSpaces
         mIs     ':'
         je      ST_LABEL
+        mov     edx, eax
 
         jmp     ST_ERRINC
 
 ; mov movsx add sub mul div inc dec jmp loop ret
 ST_C:
-IFDEF   ADDON
-        ; Additional check for invaild comment.
-        cmp     lb, 1
-        je      ST_FIRSTC
-ENDIF
         mCopy
         mIsI    'o'
         je      ST_CO
@@ -447,7 +455,7 @@ ST_COMMEN:
         jmp     ST_CK1
 ST_COMMENT:
         mCopy
-        mIs     ' '
+        call    IsBreak
         je      ST_SCOMMENT
         jmp     ST_CK1
 
@@ -680,11 +688,7 @@ IFDEF   ADDON
         jne     ST_IDEN@NOID
         mPuts   OFFSET STRERRID
         call    Crlf
-ST_IDEN@NOL:
-        dec     edi
-        dec     edx
-        cmp     edi, OFFSET buffer
-        jne     ST_IDEN@NOL
+        call    Back
         jmp     ST_BEGIN
 
 ST_IDEN@NOID:
@@ -967,22 +971,26 @@ ENDIF
         jmp     ST_LB
 ST_ERROPER:
         mPuts   OFFSET STRERROPER
-        mIs     ':'
-        jne     ST_LB
         call    Crlf
-        jmp     ST_LABEL
+        mIs     ':'
+        je      ST_LABEL
+        mIsDigit
+        je      ST_INT
+        call    Back
+        jmp     ST_BEGIN
 ST_ERRDIGIT:
         mPuts   OFFSET STRERRDIGIT
-        jmp     ST_LB
+        call    Crlf
+        jmp     ST_UNKNOWN
 ST_ERRINC:
         mPuts   OFFSET STRERRINC
-        jmp     ST_LB
+        call    Crlf
+        call    Back
+        jmp     ST_OPER
 ST_ERRIC:
         mPuts   OFFSET STRERRIC
-        mIs     ':'
-        jne     ST_LB
         call    Crlf
-        jmp     ST_LABEL
+        jmp     ST_UNKNOWN
 
 ST_ERRID:
         mPuts   OFFSET STRERRID
@@ -990,6 +998,9 @@ ST_ERRID:
 
 ; Special comment treatments.
 ST_SCOMMENT:
+        mov     edi, OFFSET buffer
+        mov     BYTE PTR [edi], 0
+        inc     edi
         mEnd
         call    SkipSpaces
 ST_SCCOMMENT:
@@ -1036,9 +1047,12 @@ ST_CCOMMENT@END:
 
 ST_LB:
         call    Crlf
-
-        call    IsBreak
+        mIs     0
         je      ST_END
+        call    IsBreak
+        jne     ST_UNKNOWN
+        mNext
+        jmp     ST_BEGIN
 
 ; Reports unknown syntax error.
 ST_UNKNOWN:
