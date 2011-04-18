@@ -13,8 +13,8 @@ STRINC          BYTE    "INSTRUCTION       ", 0
 STRREG          BYTE    "REGISTER          ", 0
 STRID           BYTE    "IDENTIFIER        ", 0
 STRCOMMENT      BYTE    "COMMENT           ", 0
-STRINTEGER      BYTE    "INTEGER CONSTANT  ", 0
-STRUNKNOWN      BYTE    "UNKNOWN           ", 0
+STRINTEGER      BYTE    "INTEGER           ", 0
+STRUNKNOWN      BYTE    "ERROR             ", 0
 
 STRERRMLB       BYTE    "[Error] Multiple labels detected.", 0
 STRERRID        BYTE    "[Error] Reserved word cannot name a identifier.", 0
@@ -957,7 +957,8 @@ ENDIF
 ; All kinds of errors.
 ST_ERRNOOPER:
         mPuts   OFFSET STRERRNOOPER
-        jmp     ST_LB
+        call    Crlf
+        jmp     ST_BEGIN
 ST_ERRNUM:
 IFDEF   ADDON
         mov     incn, 0
