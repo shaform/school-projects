@@ -3,9 +3,72 @@ TITLE   Big Integer (biginteger.asm)
 INCLUDE Irvine32.inc
 INCLUDE Macros.inc
 
+;--------------------------------------------------------------------------------
+mIs MACRO char:REQ
+; Checks if the character is the given character.
+;
+; Receives: char, the character to check.
+;           EDX, the offset to the string.
+;
+; Returns: Zero flag is set if matched.
+;          Carry flag may be modified.
+;--------------------------------------------------------------------------------
+        cmp     BYTE PTR [edx], char
+ENDM
+
+;--------------------------------------------------------------------------------
+mIsDigit MACRO
+; Checks if the character is a digital number.
+;
+; Receives: EDX, the offset to the character.
+;
+; Returns: Zero flag is set if it is valid.
+;          Carry flag may be modified.
+;--------------------------------------------------------------------------------
+        push    eax
+        mov     al, BYTE PTR [edx]
+        call    IsDigit
+        pop     eax
+ENDM
+
+;--------------------------------------------------------------------------------
+mNext MACRO
+; Advances the pointer to the next char.
+;
+; Receives: EDX, the offset to the string.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        inc     edx
+ENDM
+
+;--------------------------------------------------------------------------------
+mSetSg MACRO ptI:REQ, sg:REQ
+; Sets the sign of the BIGINTEGER.
+;
+; Receives: ptI, the offset to the BIGINTEGER.
+;           sg, the sign.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        push    eax
+        mov     eax, sg
+        mov     (BIGINT PTR [ptI]).sign, eax
+        pop     eax
+ENDM
+
+mIntS MACRO ptA, ptB
+        push    eax
+        mov     eax, (BIGINT PTR [ptA]).sign
+        cmp     eax, (BIGINT PTR [ptB]).sign
+        pop     eax
+ENDM
+
 .data
 
-ISZ = 20
+
+ISZ = 25
+BSZ = 200
 
 BIGINT STRUCT
         num     DWORD   ISZ DUP(0)
@@ -13,15 +76,10 @@ BIGINT STRUCT
 BIGINT ENDS
 
 PTBINT  TYPEDEF PTR BIGINT
+buffer  BYTE    BSZ DUP(?)
 
 
 .code
-mIntS MACRO ptA, ptB
-        push    eax
-        mov     eax, (BIGINT PTR [ptA]).sign
-        cmp     eax, (BIGINT PTR [ptB]).sign
-        pop     eax
-ENDM
 
 IntIsZero PROC uses ecx eax
         mov     ecx, ISZ
@@ -63,8 +121,8 @@ IntCmp PROC uses esi edi ecx,
         mov     edi, ptB
         add     esi, TYPE DWORD * ISZ
         add     edi, TYPE DWORD * ISZ
-        dec     esi
-        dec     edi
+        sub     esi, TYPE DWORD
+        sub     edi, TYPE DWORD
         std
         repe    cmpsd
         ret
@@ -254,18 +312,114 @@ l_IA_RET:
         ret
 IntMul ENDP
 
-IntPrint PROC,
+;--------------------------------------------------------------------------------
+IntDiv PROC,
+        ptA:PTBINT,
+        ptB:PTBINT,
+        ptC:PTBINT
+; Multiply two BIGINTs.
+; Receives: ptA, the offset to the first BIGINTEGER.
+;           ptB, the offset to the second BIGINTEGER.
+;           ptC, the offset to the destination BIGINTEGER.
+;
+; Returns: The multiplied BIGINTEGER as ptC.
+;--------------------------------------------------------------------------------
+        pushad
+
+        mIntS   ptA, ptB
+        mov     edi, (BIGINT PTR [ptC]).num
+        mov     ebx, (BIGINT PTR [ptA]).num
+        mov     edx, (BIGINT PTR [ptB]).num
+        mov     ecx, ISZ
+        jne     l_IA_SUB
+        ; Add A, B directly to C
+        call    IntAddI
+        mov     eax, (BIGINT PTR [ptA]).sign
+        mov     (BIGINT PTR [ptC]).sign, eax
+        jmp     l_IA_RET
+l_IA_SUB:
+        INVOKE  IntCmp, ptA, ptB
+        je      l_IA_ZERO
+        mov     eax, (BIGINT PTR [ptA]).sign
+        ja      l_IA_SUBB
+        xor     eax, 1
+        xchg    ebx, edx
+l_IA_SUBB:
+        mov     (BIGINT PTR [ptC]).sign, eax
+        call    IntSubI
+        jmp     l_IA_RET
+l_IA_ZERO:
+        mov     DWORD PTR [edi], 0
+        loop    l_IA_ZERO
+        mov     (BIGINT PTR [ptC]).sign, 0
+
+l_IA_RET:
+        popad
+        ret
+IntDiv ENDP
+
+IntPrint PROC uses esi,
         ptInt:DWORD
-        mov     edi, ptInt
+        mov     esi, ptInt
         call    IntIsZero
         
         
         ret
 IntPrint ENDP
 
+;--------------------------------------------------------------------------------
+IntRead PROC uses eax,
+        ptI:PTBINT
+; Reads in a BIGINTEGER.
+; Receives: ptI, the offset to the BIGINTEGER.
+;           EDX, the offset to the input string.
+;
+; Returns: The BIGINTEGER as ptI.
+;          Carry flag is set if an error is detected.
+;--------------------------------------------------------------------------------
+        mSetSg  ptI, 0
+        INVOKE  IntZero, ptI
+        mIsDigit
+        je      l_IR_D
+        mIs     '+'
+        je      l_IR_CK
+        mIs     '-'
+        je      l_IR_NEG
+        stc                                                             ; Invalid character detected.
+        ret
+l_IR_NEG:
+        mSetSg  ptI, 1
+l_IR_CK:
+        mNext
+        mIsDigit
+        je      l_IR_D
+        stc                                                             ; Invalid character detected.
+        ret
+
+l_IR_D:
+        ; ptI *= 10
+        mov     al, [edx]
+        ; ptI += al
+        mNext
+        mIsDigit
+        je      l_IR_D
+
+        ret
+IntRead ENDP
+
 
 
 main PROC
+l_1:
+        mWrite  "Input the expression to evaluate: "
+        mov     edx, OFFSET buffer
+        mov     ecx, LENGTHOF buffer
+        call    ReadString                                              ; Reads in the expression.
+        cmp     eax, 0
+        je      l_RET                                                   ; Breaks if no input.
+        call    Evaluate                                                ; Starts evaluation.
+        jmp     l_1
+l_RET:
         exit
 main ENDP
 
