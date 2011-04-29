@@ -147,11 +147,11 @@ end
 // Output for SUM & WIN
 always @(posedge CLK)
 begin
-	if (handA > handB && handA <= MAXH) begin
+	if ((handA > handB || handB > MAXH) && handA <= MAXH) begin
 		WIN <= 2'b00;
 		SUM <= handA;
 	end
-	else if (handB > handA && handB <= MAXH) begin
+	else if ((handB > handA || handA > MAXH) && handB <= MAXH) begin
 		WIN <= 2'b01;
 		SUM <= handB;
 	end
