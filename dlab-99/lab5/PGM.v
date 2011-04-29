@@ -17,7 +17,7 @@ parameter ST_OUTPUT = 3'b110;
 parameter ST_DONE = 3'b111;
 
 reg [2:0] state, next_state;
-reg [2:0] randcard;
+reg [3:0] randcard;
 integer m_w;
 reg inIN, inBT;
 reg [1:0] inMR;
@@ -28,7 +28,7 @@ reg [4:0] handA, handB;
 always @(posedge CLK)
 begin
 	if (RESET) begin
-		randcard <= 3'b000;
+		randcard <= 4'b0000;
 		m_w <= 55332;
 	end
 	else begin
