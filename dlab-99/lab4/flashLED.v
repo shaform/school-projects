@@ -12,8 +12,19 @@ reg direction;
 reg enable, enable_cnt;
 reg [cN:0] CLKs, CLKs_cnt;
 wire edge_out;
+reg [1:0] edge_in;
 
-edge_detect ed(iCLK_50, reset, in, edge_out);
+edge_detect ed(iCLK_50, reset, edge_in[1], edge_out);
+always @(posedge iCLK_50)
+begin
+	if (reset) begin
+		edge_in <= 2'b00;
+	end
+	else begin
+		edge_in[1] <= edge_in[0];
+		edge_in[0] <= in;
+	end
+end
 
 always @(posedge iCLK_50)
 begin
