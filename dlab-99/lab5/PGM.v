@@ -1,25 +1,30 @@
 module PGM(
 	input CLK, RESET, IN_VALID, BUTTON,
 	input [1:0] MORE,
-	output OUT_VALID,
-	output [1:0] WIN,
-	output [2:0] CARD,
-	output [3:0] SUM
+	output reg OUT_VALID,
+	output reg [1:0] WIN,
+	output reg [3:0] CARD,
+	output reg [3:0] SUM
 );
 parameter MAXH = 10;
-parameter ST_INIT;
-parameter ST_FC;
-parameter ST_SC;
-parameter ST_A;
-parameter ST_B;
-parameter ST_WAIT;
-parameter ST_OUTPUT;
-parameter ST_DONE;
+parameter ST_INIT = 3'b000;
+parameter ST_FC = 3'b001;
+parameter ST_SC = 3'b010;
+parameter ST_A = 3'b011;
+parameter ST_B = 3'b100;
+parameter ST_WAIT = 3'b101;
+parameter ST_OUTPUT = 3'b110;
+parameter ST_DONE = 3'b111;
+
+reg [2:0] state, next_state;
+reg [2:0] randcard;
+integer m_w;
+reg inIN, inBT;
+reg [1:0] inMR;
+reg [4:0] handA, handB;
 
 
 // Random number generator
-reg [2:0] randcard;
-unsigned integer m_w;
 always @(posedge CLK)
 begin
 	if (RESET) begin
@@ -96,10 +101,10 @@ begin
 		ST_SC: begin
 			handB <= handB + randcard;
 		end
-		ST_AC: begin
+		ST_A: begin
 			handA <= handA + randcard;
 		end
-		ST_BC: begin
+		ST_B: begin
 			handB <= handB + randcard;
 		end
 	endcase
@@ -118,7 +123,17 @@ begin
 		ST_SC: begin
 			CARD <= randcard;
 		end
-		ST_
+		ST_A: begin
+			OUT_VALID <= 1'b1;
+			CARD <= randcard;
+		end
+		ST_B: begin
+			OUT_VALID <= 1'b1;
+			CARD <= randcard;
+		end
+		ST_OUTPUT: begin
+			OUT_VALID <= 1'b1;
+		end
 		default: begin
 			OUT_VALID <= 1'b0;
 			CARD <= 3'b000;
