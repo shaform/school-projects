@@ -3,6 +3,15 @@ TITLE   Big Integer (biginteger.asm)
 INCLUDE Irvine32.inc
 INCLUDE Macros.inc
 
+ISZ = 25
+BSZ = 200
+BIGINT STRUCT
+        num     DWORD   ISZ DUP(0)
+        sign    DWORD   0
+BIGINT ENDS
+
+PTBINT  TYPEDEF PTR BIGINT
+
 ;--------------------------------------------------------------------------------
 mIs MACRO char:REQ
 ; Checks if the character is the given character.
@@ -42,20 +51,6 @@ mNext MACRO
         inc     edx
 ENDM
 
-;--------------------------------------------------------------------------------
-mSetSg MACRO ptI:REQ, sg:REQ
-; Sets the sign of the BIGINTEGER.
-;
-; Receives: ptI, the offset to the BIGINTEGER.
-;           sg, the sign.
-;
-; Returns: Nothing.
-;--------------------------------------------------------------------------------
-        push    eax
-        mov     eax, sg
-        mov     (BIGINT PTR [ptI]).sign, eax
-        pop     eax
-ENDM
 
 mIntS MACRO ptA, ptB
         push    eax
@@ -67,21 +62,56 @@ ENDM
 .data
 
 
-ISZ = 25
-BSZ = 200
 
-BIGINT STRUCT
-        num     DWORD   ISZ DUP(0)
-        sign    DWORD   0
-BIGINT ENDS
-
-PTBINT  TYPEDEF PTR BIGINT
+bintbuf BIGINT  <>
+bintbug BIGINT  <>
+bintbuh BIGINT  <>
+bintbui BIGINT  <>
+bint10  BIGINT  <1 DUP(10)>
 buffer  BYTE    BSZ DUP(?)
+strbuf  BYTE    BSZ DUP(?), 0
+STREND = $ - (TYPE BYTE)
 
 
 .code
 
-IntIsZero PROC uses ecx eax
+;--------------------------------------------------------------------------------
+SetSg PROC uses eax,
+      ptI:PTBINT,
+      sg:DWORD
+; Sets the sign of the BIGINTEGER.
+;
+; Receives: ptI, the offset to the BIGINTEGER.
+;           sg, the sign.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        mov     eax, sg
+        mov     (BIGINT PTR [ptI]).sign, eax
+        ret
+SetSg ENDP
+
+IntCopy PROC uses esi edi ecx,
+        ptD:PTBINT,
+        ptS:PTBINT
+        mov     ecx, ISZ
+        mov     edi, ptD
+        mov     esi, ptS
+        rep movsd
+        mov     esi, (BIGINT PTR [ptS]).sign
+        mov     (BIGINT PTR [ptD]).sign, esi
+        ret
+IntCopy ENDP
+
+;--------------------------------------------------------------------------------
+IntIsZero PROC uses ecx eax edi,
+        ptI:PTBINT
+; Checks if a BIGINT is zero.
+; Receives: ptI, the offset to the BIGINTEGER.
+;
+; Returns: Zero flag is set if is zero.
+;--------------------------------------------------------------------------------
+        mov     edi, ptI
         mov     ecx, ISZ
         mov     eax, 0
         cld
@@ -92,12 +122,12 @@ IntIsZero ENDP
 ;--------------------------------------------------------------------------------
 IntZero PROC uses eax edi ecx,
         ptI:PTBINT
-; Zeros a BIGINTs.
+; Zeros a BIGINT.
 ; Receives: ptI, the offset to the BIGINTEGER.
 ;
 ; Returns: The zeroed BIGINTGER as ptI.
 ;--------------------------------------------------------------------------------
-        mov     edi, (BIGINT PTR [ptI]).num
+        mov     edi, ptI
         mov     ecx, ISZ
         mov     eax, 0
         cld
@@ -127,6 +157,43 @@ IntCmp PROC uses esi edi ecx,
         repe    cmpsd
         ret
 IntCmp ENDP
+
+;--------------------------------------------------------------------------------
+IntShL PROC uses esi ecx,
+        ptI:PTBINT,
+; Shifts a BIGINT left by 1 bit.
+; Receives: ptI, the offset to the BIGINTEGER.
+;
+; Returns: The shifted BIGINT as ptI.
+;--------------------------------------------------------------------------------
+        mov     esi, ptI
+        mov     ecx, ISZ * TYPE DWORD
+        clc
+l_ISL:
+        rcl     BYTE PTR [esi], 1
+        inc     esi
+        loop    l_ISL
+        ret
+IntShL ENDP
+
+;--------------------------------------------------------------------------------
+IntShR PROC uses esi ecx,
+        ptI:PTBINT,
+; Shifts a BIGINT right by 1 bit.
+; Receives: ptI, the offset to the BIGINTEGER.
+;
+; Returns: The shifted BIGINT as ptI.
+;--------------------------------------------------------------------------------
+        mov     esi, ptI
+        add     esi, ISZ * TYPE DWORD - TYPE BYTE
+        mov     ecx, ISZ * TYPE DWORD
+        clc
+l_ISR:
+        rcr     BYTE PTR [esi], 1
+        dec     esi
+        loop    l_ISR
+        ret
+IntShR ENDP
 
 ;--------------------------------------------------------------------------------
 IntSubI PROC
@@ -169,9 +236,9 @@ IntSub PROC,
         pushad
 
         mIntS   ptA, ptB
-        mov     edi, (BIGINT PTR [ptC]).num
-        mov     ebx, (BIGINT PTR [ptA]).num
-        mov     edx, (BIGINT PTR [ptB]).num
+        mov     edi, ptC
+        mov     ebx, ptA
+        mov     edx, ptB
         mov     ecx, ISZ
         je      l_IB_SUB
         ; Add A, B directly to C
@@ -196,6 +263,27 @@ l_IB_RET:
         popad
         ret
 IntSub ENDP
+
+;--------------------------------------------------------------------------------
+IntAddII PROC uses edx eax,
+        ptI:PTBINT,
+        num:BYTE
+; Addes a BIGINT with a BYTE.
+; Receives: ptI, the offset to the BIGINTEGER.
+;           num, the BYTE.
+;
+; Returns: The added BIGINTEGER as ptI.
+;--------------------------------------------------------------------------------
+        clc
+        mov     edx, ptI
+l_IAII:
+        mov     al, num
+        adc     al, [edx]
+        mov     [edx], al
+        inc     edx
+        jc      l_IAII
+        ret
+IntAddII ENDP
 
 ;--------------------------------------------------------------------------------
 IntAddI PROC
@@ -238,9 +326,9 @@ IntAdd PROC,
         pushad
 
         mIntS   ptA, ptB
-        mov     edi, (BIGINT PTR [ptC]).num
-        mov     ebx, (BIGINT PTR [ptA]).num
-        mov     edx, (BIGINT PTR [ptB]).num
+        mov     edi, ptC
+        mov     ebx, ptA
+        mov     edx, ptB
         mov     ecx, ISZ
         jne     l_IA_SUB
         ; Add A, B directly to C
@@ -267,6 +355,38 @@ l_IA_RET:
 IntAdd ENDP
 
 ;--------------------------------------------------------------------------------
+IntMulII PROC,
+        ptI:PTBINT,
+        num:BYTE
+; Multiply a BIGINT with a BYTE.
+; Receives: ptI, the offset to the BIGINTEGER.
+;           num, the BYTE.
+;
+; Returns: The multiplied BIGINTEGER as ptI.
+;--------------------------------------------------------------------------------
+        cmp     num, 0
+        je      l_IMII_ZERO
+        INVOKE  IntIsZero, ptI
+        je      l_IMII_RET
+        INVOKE  IntCopy, OFFSET bintbuf, ptI
+        INVOKE  IntZero, ptI
+l_IMII_M:
+        shr     num, 1
+        jnc     l_IMII_SK
+        INVOKE  IntAdd, ptI, OFFSET bintbuf, ptI
+l_IMII_SK:
+        INVOKE  IntShL, OFFSET bintbuf
+        cmp     num, 0
+        jne     l_IMII_M
+        jmp     l_IMII_RET
+l_IMII_ZERO:
+        INVOKE  IntZero, ptI
+
+l_IMII_RET:
+        ret
+IntMulII ENDP
+
+;--------------------------------------------------------------------------------
 IntMul PROC,
         ptA:PTBINT,
         ptB:PTBINT,
@@ -279,35 +399,37 @@ IntMul PROC,
 ; Returns: The multiplied BIGINTEGER as ptC.
 ;--------------------------------------------------------------------------------
         pushad
-
         mIntS   ptA, ptB
-        mov     edi, (BIGINT PTR [ptC]).num
-        mov     ebx, (BIGINT PTR [ptA]).num
-        mov     edx, (BIGINT PTR [ptB]).num
-        mov     ecx, ISZ
-        jne     l_IA_SUB
-        ; Add A, B directly to C
-        call    IntAddI
-        mov     eax, (BIGINT PTR [ptA]).sign
-        mov     (BIGINT PTR [ptC]).sign, eax
-        jmp     l_IA_RET
-l_IA_SUB:
-        INVOKE  IntCmp, ptA, ptB
-        je      l_IA_ZERO
-        mov     eax, (BIGINT PTR [ptA]).sign
-        ja      l_IA_SUBB
-        xor     eax, 1
-        xchg    ebx, edx
-l_IA_SUBB:
-        mov     (BIGINT PTR [ptC]).sign, eax
-        call    IntSubI
-        jmp     l_IA_RET
-l_IA_ZERO:
-        mov     DWORD PTR [edi], 0
-        loop    l_IA_ZERO
-        mov     (BIGINT PTR [ptC]).sign, 0
+        mov     esi, 0
+        je      l_IM_POS
+        mov     esi, 1
+l_IM_POS:
+        INVOKE  IntIsZero, ptA
+        je      l_IM_ZERO
+        INVOKE  IntIsZero, ptB
+        je      l_IM_ZERO
+        INVOKE  IntCopy, OFFSET bintbuf, ptA
+        INVOKE  IntCopy, OFFSET bintbug, ptB
+        INVOKE  IntZero, ptC
 
-l_IA_RET:
+
+l_IM_M:
+        INVOKE  IntShR, OFFSET bintbug
+        jnc     l_IM_SK
+        mov     edi, ptC
+        mov     ebx, OFFSET bintbuf.num
+        mov     edx, ptC
+        mov     ecx, ISZ
+        call    IntAddI
+l_IM_SK:
+        INVOKE  IntShL, OFFSET bintbuf
+        INVOKE  IntIsZero, OFFSET bintbug
+        jne     l_IM_M
+        jmp     l_IM_RET
+l_IM_ZERO:
+        INVOKE  IntZero, ptC
+l_IM_RET:
+        INVOKE  SetSg, ptC, esi
         popad
         ret
 IntMul ENDP
@@ -317,53 +439,94 @@ IntDiv PROC,
         ptA:PTBINT,
         ptB:PTBINT,
         ptC:PTBINT
-; Multiply two BIGINTs.
+; Divides a BIGINT by a BIGINT.
 ; Receives: ptA, the offset to the first BIGINTEGER.
 ;           ptB, the offset to the second BIGINTEGER.
 ;           ptC, the offset to the destination BIGINTEGER.
 ;
-; Returns: The multiplied BIGINTEGER as ptC.
+; Returns: The divided BIGINTEGER as ptC.
 ;--------------------------------------------------------------------------------
         pushad
-
         mIntS   ptA, ptB
-        mov     edi, (BIGINT PTR [ptC]).num
-        mov     ebx, (BIGINT PTR [ptA]).num
-        mov     edx, (BIGINT PTR [ptB]).num
-        mov     ecx, ISZ
-        jne     l_IA_SUB
-        ; Add A, B directly to C
-        call    IntAddI
-        mov     eax, (BIGINT PTR [ptA]).sign
-        mov     (BIGINT PTR [ptC]).sign, eax
-        jmp     l_IA_RET
-l_IA_SUB:
-        INVOKE  IntCmp, ptA, ptB
-        je      l_IA_ZERO
-        mov     eax, (BIGINT PTR [ptA]).sign
-        ja      l_IA_SUBB
-        xor     eax, 1
-        xchg    ebx, edx
-l_IA_SUBB:
-        mov     (BIGINT PTR [ptC]).sign, eax
-        call    IntSubI
-        jmp     l_IA_RET
-l_IA_ZERO:
-        mov     DWORD PTR [edi], 0
-        loop    l_IA_ZERO
-        mov     (BIGINT PTR [ptC]).sign, 0
+        mov     esi, 0
+        je      l_ID_POS
+        mov     esi, 1
+l_ID_POS:
+        INVOKE  IntIsZero, ptA
+        je      l_ID_ZERO
+        INVOKE  IntIsZero, ptB
+        je      l_ID_DIVZ
+        INVOKE  IntCopy, OFFSET bintbuf, ptA
+        INVOKE  IntCopy, OFFSET bintbug, ptB
+        INVOKE  SetSg, OFFSET bintbuf, 0
+        INVOKE  SetSg, OFFSET bintbug, 0
+        INVOKE  IntZero, OFFSET bintbuh
+        mov     bintbuh.num, 1
+        INVOKE  IntZero, ptC
+        clc
+l_ID_M:
+        INVOKE  IntCmp, OFFSET bintbuf, OFFSET bintbug
+        jb      l_ID_M2
+        INVOKE  IntShL, OFFSET bintbuh
+        INVOKE  IntShL, OFFSET bintbug
+        jnc     l_ID_M
+        jmp     l_ID_D
+l_ID_M2:
+        INVOKE  IntShR, OFFSET bintbuh
+        INVOKE  IntShR, OFFSET bintbug
+l_ID_D:
+        INVOKE  IntAdd, ptC, OFFSET bintbuh, ptC
+        INVOKE  IntSub, OFFSET bintbuf, OFFSET bintbug, OFFSET bintbuf
+l_ID_CMP:
+        INVOKE  IntShR, OFFSET bintbuh
+        INVOKE  IntShR, OFFSET bintbug
+        INVOKE  IntCmp, OFFSET bintbuf, OFFSET bintbug
+        jb      l_ID_CMP
+        
+        INVOKE  IntIsZero, OFFSET bintbuh
+        jne     l_ID_D
 
-l_IA_RET:
+        jmp     l_ID_RET
+l_ID_DIVZ:
+        stc
+        jmp     l_ID_RET
+l_ID_ZERO:
+        INVOKE  IntZero, ptC
+l_ID_RET:
+        INVOKE  SetSg, ptC, esi
         popad
         ret
 IntDiv ENDP
 
-IntPrint PROC uses esi,
-        ptInt:DWORD
-        mov     esi, ptInt
-        call    IntIsZero
-        
-        
+;--------------------------------------------------------------------------------
+IntPrint PROC,
+        ptI:PTBINT
+; Prints a BIGINTEGER.
+; Receives: ptI, the offset to the BIGINTEGER.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        pushad
+        INVOKE  IntCopy, OFFSET bintbuf, ptI
+        mov     ebx, 10
+        mov     esi, OFFSET bintbuf
+        mov     edi, STREND
+
+l_IP_P:
+        dec     edi
+        mov     eax, [esi]                                              ; Extracts the lowest digit.
+        mov     edx, 0
+        div     ebx
+        add     dl, '0'                                                 ; Moves the lowest digit to output buffer.
+        mov     [edi], dl
+        INVOKE  IntDiv, OFFSET bintbuf, OFFSET bint10, OFFSET bintbuf
+        INVOKE  IntIsZero, OFFSET bintbuf
+        jne     l_IP_P
+
+        mov     edx, edi
+        call    WriteString
+        call    Crlf
+        popad
         ret
 IntPrint ENDP
 
@@ -377,7 +540,7 @@ IntRead PROC uses eax,
 ; Returns: The BIGINTEGER as ptI.
 ;          Carry flag is set if an error is detected.
 ;--------------------------------------------------------------------------------
-        mSetSg  ptI, 0
+        INVOKE  SetSg, ptI, 0
         INVOKE  IntZero, ptI
         mIsDigit
         je      l_IR_D
@@ -388,7 +551,7 @@ IntRead PROC uses eax,
         stc                                                             ; Invalid character detected.
         ret
 l_IR_NEG:
-        mSetSg  ptI, 1
+        INVOKE  SetSg, ptI, 1
 l_IR_CK:
         mNext
         mIsDigit
@@ -397,9 +560,10 @@ l_IR_CK:
         ret
 
 l_IR_D:
-        ; ptI *= 10
+        INVOKE  IntMulII, ptI, 10
         mov     al, [edx]
-        ; ptI += al
+        sub     al, '0'
+        INVOKE  IntAddII, ptI, al
         mNext
         mIsDigit
         je      l_IR_D
@@ -409,6 +573,16 @@ IntRead ENDP
 
 
 
+;--------------------------------------------------------------------------------
+Evaluate PROC
+; Evaluates a BIGINTEGER expression.
+; Receives: EDX, the offset to the input string.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+
+Evaluate ENDP
+
 main PROC
 l_1:
         mWrite  "Input the expression to evaluate: "
@@ -417,7 +591,9 @@ l_1:
         call    ReadString                                              ; Reads in the expression.
         cmp     eax, 0
         je      l_RET                                                   ; Breaks if no input.
-        call    Evaluate                                                ; Starts evaluation.
+;       call    Evaluate                                                ; Starts evaluation.
+        INVOKE  IntRead, OFFSET bintbui
+        INVOKE  IntPrint, OFFSET bintbui
         jmp     l_1
 l_RET:
         exit
