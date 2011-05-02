@@ -85,6 +85,8 @@ begin
 			else next_state = ST_WAIT;
 		default: next_state = ST_DONE;
 	endcase
+	if (RESET)
+		next_state = ST_INIT;
 end
 
 // FSM Behaviour
@@ -108,6 +110,10 @@ begin
 			handB <= handB + randcard;
 		end
 	endcase
+	if (RESET) begin
+		handA <= 3'b000;
+		handB <= 3'b000;
+	end
 end
 
 
@@ -139,6 +145,10 @@ begin
 			CARD <= 3'b000;
 		end
 	endcase
+	if (RESET) begin
+		OUT_VALID <= 1'b0;
+		CARD <= 3'b000;
+	end
 end
 
 
