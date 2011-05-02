@@ -63,7 +63,7 @@ begin
 		state <= next_state;
 end
 
-always @(state, handA, handB, MORE, inIN, inBT, inMR)
+always @(state, handA, handB, MORE, inIN, inBT, inMR, RESET)
 begin
 	case (state)
 		ST_INIT: if (inIN && inBT) next_state = ST_FC;
