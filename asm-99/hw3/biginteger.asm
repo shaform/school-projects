@@ -5,6 +5,9 @@ INCLUDE Macros.inc
 
 ISZ = 85
 BSZ = 400
+STSZ = 200
+
+; The Big Number Structure.
 BIGINT STRUCT
         num     DWORD   ISZ DUP(0)
         sign    DWORD   0
@@ -85,17 +88,181 @@ bintbui BIGINT  <>
 bintbuj BIGINT  <>
 bintbuk BIGINT  <>
 ; For IntPrint
-bintbup BIGINT  <>
 bintbuq BIGINT  <>
 bintbur BIGINT  <>
+; For Lex
+tkd     BIGINT  <>
+; For Eval
+bintbux BIGINT  <>
+bintbuy BIGINT  <>
+bintbuz BIGINT  <>
 
 bint10  BIGINT  <1 DUP(10)>
+bint1   BIGINT  <1 DUP(1)>
+bint2   BIGINT  <1 DUP(2)>
 buffer  BYTE    BSZ DUP(?)
 strbuf  BYTE    BSZ DUP(?), 0
 STREND = $ - (TYPE BYTE)
 
+; The precedence of operators for evaluation.
+; 1 : ()
+; 2 : + -
+; 3 : * / %
+; 4 : ^
+pred    BYTE    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        BYTE    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        BYTE    0,0,0,0,0,3,0,0,1,1,3,2,0,2,0,3
+        BYTE    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        BYTE    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        BYTE    0,0,0,0,0,0,0,0,0,0,0,0,0,0,4
+
+; Stacks
+st_op   BYTE    STSZ DUP(?)
+st_num  BIGINT  STSZ DUP(<>)
+op_top  SDWORD  -1
+num_top SDWORD  -1
+
+isopr   BYTE    0
+
+;--------------------------------------------------------------------------------
+mTopOp MACRO op:REQ
+; Gets the top of the operator stack.
+;
+; Receives: op, where to put the operator.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        push    edx
+        mov     edx, op_top
+        add     edx, OFFSET st_op
+        mov     op, BYTE PTR [edx]
+        pop     edx
+ENDM
+;--------------------------------------------------------------------------------
+mPopOp MACRO
+; Pops a operator.
+;
+; Receives: Nothing.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        dec     op_top
+ENDM
+
+;--------------------------------------------------------------------------------
+mPushOp MACRO op:REQ
+; Pushs a operator.
+;
+; Receives: op, the operator to push.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        push    edx
+        inc     op_top
+        mov     edx, op_top
+        mov     BYTE PTR st_op[edx], op
+        pop     edx
+ENDM
+
+;--------------------------------------------------------------------------------
+mIsOpEmpty MACRO
+; Checks if the op stack is empty.
+;
+; Receives: Nothing.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        cmp     op_top, -1
+ENDM
+
+;--------------------------------------------------------------------------------
+mOpIs MACRO char:REQ
+; Checks if the top of op stack is char.
+;
+; Receives: char, the char to check.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        push    edx
+        mov     edx, op_top
+        mov     dl, st_op[edx]
+        cmp     dl, char
+        pop     edx
+ENDM
+
+;--------------------------------------------------------------------------------
+mTopN MACRO N:REQ
+; Gets the top of the operand stack.
+;
+; Receives: op, where to put the operator.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        pushad
+        mov     eax, num_top
+        mov     ebx, TYPE BIGINT
+        mul     ebx
+        add     eax, OFFSET st_num
+        mov     edi, N
+        INVOKE  IntCopy, edi, eax
+        popad
+ENDM
+
+;--------------------------------------------------------------------------------
+mPopN MACRO
+; Pops a operand.
+;
+; Receives: Nothing.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        dec     num_top
+ENDM
+
+;--------------------------------------------------------------------------------
+mPushN MACRO ptInt:REQ
+; Pushs a BIGINTEGR.
+;
+; Receives: ptInt, the offset of the BIGINTEGER to push.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        push    eax
+        push    ebx
+        push    edx
+        inc     num_top
+        mov     eax, num_top
+        mov     ebx, TYPE BIGINT
+        mul     ebx
+        add     eax, OFFSET st_num
+        mov     ebx, ptInt
+        INVOKE  IntCopy, eax, ebx
+        pop     edx
+        pop     ebx
+        pop     eax
+ENDM
+
 
 .code
+
+;--------------------------------------------------------------------------------
+SkipSpaces PROC
+; Skips spaces in the string
+;
+; Receives: EDX, the offset to the string.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+l_SS:
+        cmp     BYTE PTR [edx],  ' '
+        jne     l_SS_RET
+        inc     edx
+        jmp     l_SS
+
+l_SS_RET:
+        ret
+SkipSpaces ENDP
+
 ;--------------------------------------------------------------------------------
 IntS PROC uses eax ebx,
      ptA:PTBINT,
@@ -132,9 +299,17 @@ SetSg PROC uses eax edi,
         ret
 SetSg ENDP
 
+;--------------------------------------------------------------------------------
 IntCopy PROC uses esi edi ecx,
         ptD:PTBINT,
         ptS:PTBINT
+; Copies a BIGINTEGER to another BIGINTEGER.
+;
+; Receives: ptD, the offset of the destination BIGINTEGER.
+;           ptS, the offset of the source BIGINTEGER.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
         mov     ecx, ISZ
         mov     edi, ptD
         mov     esi, ptS
@@ -548,13 +723,20 @@ l_ID_CMP:
         jmp     l_ID_RET
 l_ID_DIVZ:
         stc
-        jmp     l_ID_RET
+        popad
+        ret
 l_ID_ZERO:
+        INVOKE  IntCopy, OFFSET bintbud, ptA
         INVOKE  IntZero, ptC
 l_ID_RET:
         mov     eax, ptA
         INVOKE  SetSg, ptC, esi
+        INVOKE  IntIsZero, OFFSET bintbud
+        jne @F
+        INVOKE  SetSg, OFFSET bintbud, 0
+@@:
         popad
+        clc
         ret
 IntDiv ENDP
 
@@ -570,15 +752,12 @@ IntPrint PROC,
         INVOKE  IntCopy, OFFSET bintbuq, ptI
         INVOKE  SetSg, OFFSET bintbuq, 0
         mov     ebx, 10
-        mov     esi, OFFSET bintbup
+        mov     esi, OFFSET bintbud
         mov     edi, STREND
 
 l_IP_P:
 
-        INVOKE  IntCopy, OFFSET bintbup, OFFSET bintbuq
         INVOKE  IntDiv, OFFSET bintbuq, OFFSET bint10, OFFSET bintbuq
-        INVOKE  IntMul, OFFSET bintbuq, OFFSET bint10, OFFSET bintbur
-        INVOKE  IntSub, OFFSET bintbup, OFFSET bintbur, OFFSET bintbup
 
         dec     edi
         mov     eax, [esi]                                              ; Extracts the lowest digit.
@@ -642,82 +821,273 @@ l_IR_D:
         mNext
         mIsDigit
         je      l_IR_D
-
+        INVOKE  IntIsZero, ptI
+        jne     @f
+        INVOKE  SetSg, ptI, 0
+@@:
         ret
 IntRead ENDP
 
 
 
 ;--------------------------------------------------------------------------------
-Evaluate PROC
-; Evaluates a BIGINTEGER expression.
+CheckPair PROC uses edx eax
+; Checks if the parentheses are correctly paired in the input.
 ; Receives: EDX, the offset to the input string.
 ;
 ; Returns: Nothing.
 ;--------------------------------------------------------------------------------
+        mov     eax, 0
+l_CP:
+        mIs     0
+        je      l_CP_RET
+        mIs     '('
+        jne     @F
+        inc     eax
+        jmp     l_CP@
+@@:
+        mIs     ')'
+        jne     l_CP@
+        dec     eax
+        cmp     eax, 0
+        jl      l_CP_ERR
+l_CP@:
+        mNext
+        jmp     l_CP
+
+l_CP_ERR:
+        stc
+        ret
+l_CP_RET:
+        clc
+        ret
+CheckPair ENDP
+LX_END = 0
+LX_NUM = 256
+LX_ERROR = 257
+
+;--------------------------------------------------------------------------------
+Lex PROC uses ebx esi
+; Lexer.
+; Receives: EDX, the offset to the input string.
+;
+; Returns: The token as EAX.
+;--------------------------------------------------------------------------------
+        call    SkipSpaces
+        mov     al, [edx]
+        movzx   si, al
+        mov     bl, pred[si]
+
+
+        cmp     isopr, 0
+        je      @F
+        mov     isopr, 0
+        cmp     bl, 0
+        je      l_LX_ERR
+        movzx   eax, al
+        jmp     l_LX_RET
+@@:
+        mIs     '('
+        jne     @F
+        mov     eax, '('
+        jmp     l_LX_RET
+@@:
+        cmp     al, '-'
+        je      @F
+        cmp     al, '+'
+        je      @F
+        cmp     bl, 0
+        je      @F
+        jmp     l_LX_ERR
+@@:
+        mov     esi, edx
+        INVOKE  IntRead, OFFSET tkd
+        cmp     esi, edx
+        jne     @F
+        jmp     l_LX_ERR
+@@:
+        mov     isopr, 1
+        mov     eax, LX_NUM
+        ret
+l_LX_ERR:
+        mov     eax, LX_ERROR
+l_LX_RET:
+        mNext
+        ret
+Lex ENDP
+
+;--------------------------------------------------------------------------------
+Eval PROC uses ebx ecx
+; Evaluates two BIGINTEGERs in the stack.
+; Receives: Nothing.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+
+; Get the two operands, assuming that they exist.
+        mTopN   OFFSET bintbuy
+        mPopN
+        mTopN   OFFSET bintbux
+        mPopN
+        mTopOp  bl
+
+        cmp     bl, '+'
+        jne     @F
+        INVOKE  IntAdd, OFFSET bintbux, OFFSET bintbuy, OFFSET bintbuz
+        jmp     l_E_RET
+@@:
+        cmp     bl, '-'
+        jne     @F
+        INVOKE  IntSub, OFFSET bintbux, OFFSET bintbuy, OFFSET bintbuz
+        jmp     l_E_RET
+@@:
+        cmp     bl, '*'
+        jne     @F
+        INVOKE  IntMul, OFFSET bintbux, OFFSET bintbuy, OFFSET bintbuz
+        jmp     l_E_RET
+@@:
+        cmp     bl, '/'
+        jne     @F
+        INVOKE  IntDiv, OFFSET bintbux, OFFSET bintbuy, OFFSET bintbuz
+        jmp     l_E_RET
+@@:
+        cmp     bl, '%'
+        jne     @F
+        INVOKE  IntDiv, OFFSET bintbux, OFFSET bintbuy, OFFSET bintbuz
+        jc      l_E_RET
+        INVOKE  IntCopy, OFFSET bintbuz, OFFSET bintbud
+        jmp     l_E_RET
+@@:
+        ; The '^' operator.
+        INVOKE  IntZero, OFFSET bintbuz
+        INVOKE  IntIsZero, OFFSET bintbux
+        je      l_E_RET
+        mov     DWORD PTR [bintbuz], 1
+        INVOKE  IntIsZero, OFFSET bintbuy
+        je      l_E_RET                                                 ; x^0 = 1
+        INVOKE  IntS, OFFSET bint10, OFFSET bintbuy
+        jne     @F
+l_E_P:
+        ; y is positive.
+        INVOKE  IntMul, OFFSET bintbuz, OFFSET bintbux, OFFSET bintbuz
+        INVOKE  IntSub, OFFSET bintbuy, OFFSET bint1, OFFSET bintbuy
+        INVOKE  IntIsZero, OFFSET bintbuy
+        jne     L_E_P
+        jmp     l_E_RET
+@@:
+        ; y is negative.
+        INVOKE  IntCmp, OFFSET bintbux, OFFSET bint1
+        ja      @F                                                      ; when x>1, x^-? = 0
+        INVOKE  IntDiv, OFFSET bintbuy, OFFSET bint2, OFFSET bintbuy
+        cmp     DWORD PTR [bintbud], 0
+        je      l_E_RET                                                 ; when y is odd, the sign of z is +
+        INVOKE  SetSg, OFFSET bintbuz, 1
+        jmp     l_E_RET
+@@:
+        INVOKE  IntZero, OFFSET bintbuz
+l_E_RET:
+        pushfd
+        mPushN  OFFSET bintbuz
+        popfd
+        ret
+Eval ENDP
+
+;--------------------------------------------------------------------------------
+Evaluate PROC
+; Evaluates a BIGINTEGER expression.
+; Receives: EDX, the offset to the input string.
+;
+; Returns: The result as bintbuz.
+;--------------------------------------------------------------------------------
         pushad
         mov     edx, OFFSET buffer
         call    CheckPair
-        jc      l_EV_RET
-;		isopr = false;
-;		op_clear();
-        mOpClear
-;		n_clear();
-        mNClear
-;		par_c = 0;
+        jc      l_EV_CP
+        mov     isopr, 0
+
+        ; Clears both stacks.
+        mov     op_top, -1
+        mov     num_top, -1
 
 l_EV_LEX:
         call    Lex
-        cmp     eax, NUM
-        cmp     eax, ERROR
+
+        ; Checks if it's the end.
+        cmp     eax, 0
+        je      l_EV_DONE
+
+        ; Checks if it's the number.
+        cmp     eax, LX_NUM
+        jne     @F
+        mPushN  OFFSET tkd
+        jmp     l_EV_LEX
+
+@@:
+        ; Checks if it's the error.
+        cmp     eax, LX_ERROR
+        jne     @F
+        jmp     l_EV_ERR
+@@:
         cmp     eax, '('
+        jne     @F
+        mPushOp '('
+        jmp     l_EV_LEX
+@@:
         cmp     eax, ')'
-        cmp     eax, ')'
+        jne     @F
+
+l_EV_EV:
+        mOpIs   '('
+        je      l_EV_EV@
+        call    Eval
+        jc      l_EV_DZ
+        mPopOp
+        jmp     l_EV_EV
+l_EV_EV@:
+        mPopOp
+        mov     isopr, 1
+        jmp     l_EV_LEX
+@@:
         ; Operator found
-
-        ; Final Evaulation
-;		while (tk = lex()) {
-;			switch (tk) {
-;				case NUM:
-;					n_push(tkd);
-;					break;
-;				case ERROR:
-;					return true;
-;				case '(':
-;					op_push('(');
-;					++par_c;
-;					break;
-;				case ')':
-;					if (--par_c < 0) return true;
-;
-;					while (op_top() != '(') {
-;						eval(op_top());
-;						op_pop();
-;					}
-;					// pop '('
-;					op_pop();
-;					isopr = true;
-;					break;
-;				default:
-;					while (!op_empty() && pred[op_top()] >= pred[tk] && tk != '^') {
-;						eval(op_top());
-;						op_pop();
-;					}
-;					op_push(tk);
-;			}
-;
-;		}
-;
-;		if (par_c) return true;
-;		else while (!op_empty()) {
-;			eval(op_top());
-;			op_pop();
-;		}
-;
-;		res = n_top();
-;		return false;
+        mIsOpEmpty
+        je      @F
+        mTopOp  bl
+        movzx   si, bl
+        mov     bl, pred[si]
+        mov     cl, pred[eax]
+        cmp     bl, cl
+        jb      @F
+        cmp     eax, '^'
+        je      @F
+        call    Eval
+        jc      l_EV_DZ
+        mPopOp
+@@:
+        mPushOp al
+        jmp     l_EV_LEX
         
-
+        ; Evaluates remaing operands.
+l_EV_DONE:
+        mIsOpEmpty
+        je      l_EV_RET
+        call    Eval
+        jc      l_EV_DZ
+        mPopOp
+        jmp     l_EV_DONE
+l_EV_DZ:
+        mWrite  "Error: divide by zero."
+        call    Crlf
+        stc
+        jmp     l_EV_RET
+l_EV_CP:
+        mWrite  "Error: mismatched parentheses."
+        call    Crlf
+        stc
+        jmp     l_EV_RET
+l_EV_ERR:
+        mWrite  "Error: syntax error."
+        call    Crlf
+        stc
 l_EV_RET:
         popad
         ret
@@ -731,7 +1101,10 @@ l_1:
         call    ReadString                                              ; Reads in the expression.
         cmp     eax, 0
         je      l_RET                                                   ; Breaks if no input.
-;       call    Evaluate                                                ; Starts evaluation.
+        call    Evaluate                                                ; Starts evaluation.
+        jc      l_1
+        
+        comment / The test suite for BIGINT.
         INVOKE  IntRead, OFFSET bintbui
         mov     edx, OFFSET buffer
         mov     ecx, LENGTHOF buffer
@@ -765,7 +1138,9 @@ l_2:
         mDebug  "Read : ", bintbui.num
         mDebug  "Read : ", [bintbui.num + TYPE DWORD]
 @
-        INVOKE  IntPrint, OFFSET bintbui
+/
+        mTopN   OFFSET bintbuz
+        INVOKE  IntPrint, OFFSET bintbuz
         jmp     l_1
 l_RET:
         exit
