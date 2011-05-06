@@ -29,6 +29,10 @@ wire ED_w, ED_s, ED_e;
 syn_edge_detect ed1(CLK, RESET, BTN_w, ED_w);
 syn_edge_detect ed2(CLK, RESET, BTN_e, ED_e);
 syn_edge_detect ed3(CLK, RESET, BTN_s, ED_s);
+//assign ED_w = BTN_w;
+//assign ED_e = BTN_e;
+//assign ED_s = BTN_s;
+
 
 always @(RESET, WIN, SUM, CARD, state)
 begin
@@ -87,7 +91,7 @@ begin
 		state <= next_state;
 end
 
-always @(state, handA, handB, MORE, inA, inB, inC, RESET)
+always @(state, handA, handB, MORE, inA, inB, inC, inMR, RESET)
 begin
 	case (state)
 		ST_INIT:
@@ -95,9 +99,13 @@ begin
 				next_state = ST_FA;
 			else if (inB)
 				next_state = ST_FB;
+			else
+				next_state = ST_INIT;
 		ST_FA:
 			if (inB)
 				next_state = ST_SB;
+			else
+				next_state = ST_FA;
 		ST_SB:
 			if (inC) begin
 				if (handA > MAXH || handB > MAXH)
@@ -105,26 +113,36 @@ begin
 				else
 					next_state = ST_WAIT;
 			end
+			else
+				next_state = ST_SB;
 		ST_FB:
 			if (inA)
 				next_state = ST_SA;
+			else
+				next_state = ST_FB;
 		ST_SA:
 			if (inC)
 				if (handA > MAXH || handB > MAXH)
 					next_state = ST_OUTPUT;
 				else next_state = ST_WAIT;
+			else
+				next_state = ST_SA;
 		ST_A:
 			if (inC)
 				if (handA > MAXH || handB > MAXH)
 					next_state = ST_OUTPUT;
 				else
 					next_state = ST_WAIT;
+			else
+				next_state = ST_A;
 		ST_B:
 			if (inC)
 				if (handA > MAXH || handB > MAXH)
 					next_state = ST_OUTPUT;
 				else
 					next_state = ST_WAIT;
+			else
+				next_state = ST_B;
 		ST_WAIT:
 			if (inA && inMR == 2'b01)
 				next_state = ST_A;
