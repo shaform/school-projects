@@ -6,7 +6,7 @@
 #PACE: Start of PACE I/O Pin Assignments
 NET "e"  LOC = "H13"  ;
 NET "s"  LOC = "K17"  ;
-NET "w"  LOC = "D12"  ;
+NET "w"  LOC = "D18"  ;
 NET "n"  LOC = "V4"  ;
 NET "sw[0]"  LOC = "L13"  ;
 NET "sw[1]"  LOC = "L14"  ;
