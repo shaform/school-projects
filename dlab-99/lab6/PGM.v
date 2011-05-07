@@ -91,7 +91,7 @@ begin
 		state <= next_state;
 end
 
-always @(state, handA, handB, MORE, inA, inB, inC, inMR, RESET)
+always @(state, handA, handB, inA, inB, inC, inMR, RESET)
 begin
 	case (state)
 		ST_INIT:
