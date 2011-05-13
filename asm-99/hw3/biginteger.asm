@@ -114,7 +114,9 @@ pred    BYTE    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
         BYTE    0,0,0,0,0,3,0,0,1,1,3,2,0,2,0,3
         BYTE    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
         BYTE    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-        BYTE    0,0,0,0,0,0,0,0,0,0,0,0,0,0,4
+        BYTE    0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0
+        BYTE    0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0
+        BYTE    144 DUP(0)
 
 ; Stacks
 st_op   BYTE    STSZ DUP(?)
@@ -461,7 +463,7 @@ IntSub PROC,
         mov     edx, ptB
         mov     ecx, ISZ
         je      l_IB_SUB
-        ; Add A, B directly to C
+        ; Signs are different. Add A, B directly to C
         call    IntAddI
         mov     edi, ptC
         mov     ebx, ptA
@@ -470,10 +472,10 @@ IntSub PROC,
         jmp     l_IB_RET
 l_IB_SUB:
         INVOKE  IntCmp, ptA, ptB
-        je      l_IB_ZERO
+        je      l_IB_ZERO                                               ; Sets result as zero if A==B
         mov     eax, (BIGINT PTR [ebx]).sign
         ja      l_IA_SUBB
-        xor     eax, 1
+        xor     eax, 1                                                  ; A < B, sets the sign of C as B's.
         xchg    ebx, edx
 l_IA_SUBB:
         mov     (BIGINT PTR [edi]).sign, eax
@@ -555,7 +557,7 @@ IntAdd PROC,
         mov     edx, ptB
         mov     ecx, ISZ
         INVOKE  IntS, ptA, ptB
-        jne     l_IA_SUB
+        jne     l_IA_SUB                                                ; If signs are different, uses substraction.
         ; Add A, B directly to C
         call    IntAddI
         mov     eax, ptA
@@ -676,6 +678,7 @@ IntDiv PROC,
 ;           ptC, the offset to the destination BIGINTEGER.
 ;
 ; Returns: The divided BIGINTEGER as ptC.
+;          The remainer as bintbud.
 ;--------------------------------------------------------------------------------
         pushad
         mov     eax, ptA
@@ -825,6 +828,7 @@ l_IR_D:
         jne     @f
         INVOKE  SetSg, ptI, 0
 @@:
+        clc
         ret
 IntRead ENDP
 
@@ -859,6 +863,8 @@ l_CP_ERR:
         stc
         ret
 l_CP_RET:
+        cmp     eax, 0
+        jne     l_CP_ERR
         clc
         ret
 CheckPair ENDP
@@ -902,6 +908,7 @@ Lex PROC uses ebx esi
 @@:
         mov     esi, edx
         INVOKE  IntRead, OFFSET tkd
+        jc      l_LX_ERR
         cmp     esi, edx
         jne     @F
         jmp     l_LX_ERR
@@ -1041,7 +1048,7 @@ l_EV_EV:
         je      l_EV_EV@
         call    Eval
         jc      l_EV_DZ
-        mPopOp
+        mPopOp                                                          ; Evaluates the whole ().
         jmp     l_EV_EV
 l_EV_EV@:
         mPopOp
@@ -1055,13 +1062,14 @@ l_EV_EV@:
         movzx   si, bl
         mov     bl, pred[si]
         mov     cl, pred[eax]
-        cmp     bl, cl
+        cmp     bl, cl                                                  ; Checks precedence.
         jb      @F
         cmp     eax, '^'
         je      @F
         call    Eval
         jc      l_EV_DZ
         mPopOp
+        jmp     @B
 @@:
         mPushOp al
         jmp     l_EV_LEX
