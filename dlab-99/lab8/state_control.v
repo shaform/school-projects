@@ -23,8 +23,7 @@ localparam DRAW_GAME = 2'd3;
 reg [1:0] WIN, state;
 reg [1:0] next_win, next_state;
 
-assign OLED[1:0] = state[1:0];
-assign OLED[7:6] = WIN[1:0];
+assign OLED = {WIN, 4'b0, state};
 
 always @(posedge CLK)
 begin

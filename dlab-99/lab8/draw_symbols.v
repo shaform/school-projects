@@ -21,11 +21,11 @@ wire draw_out;
 wire [3:0] row, col;
 
 reg [1:0] select;
-reg [4:0] j;
 
 always @(*)
 begin
-	if (hcounter >= left && hcounter < left+384 && vcounter >= down && vcounter < down+384) begin
+	if (hcounter >= left && hcounter < left+384 && vcounter >= down && vcounter < down+384) begin : selblock
+		integer j;
 		j = 3*((vcounter-down)/128)+(hcounter-left)/128;
 		if (occupied[j])
 			select = symbol[j]+1;
@@ -42,7 +42,7 @@ word w(draw_out, row, col, select);
 
 always @(*)
 begin
-	if (visible) begin
+	if (visible && ~reset) begin
 		//draw lines on game board
 		VGA_R = 1'b1;
 		VGA_G = 1'b1;
