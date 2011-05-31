@@ -35,10 +35,7 @@ syn_edge_detect sed3(CLK_25, reset, BTN_NORTH, start);
 
 // generate a 25Mhz clock
 always @(posedge iCLK_50)
-	if (reset)
-		CLK_25 = 1'b0;
-	else
-		CLK_25 = ~CLK_25;
+	CLK_25 = ~CLK_25;
 
 VGA_control vga_c(.CLK(CLK_25),.reset(reset),.vcounter(vcounter),
 	.hcounter(hcounter),.visible(visible),.oHS(oHS),.oVS(oVS));
