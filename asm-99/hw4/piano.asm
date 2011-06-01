@@ -170,14 +170,47 @@ MusicBox PROC uses cx eax
         ret
 MusicBox ENDP
 
+;--------------------------------------------------------------------------------
+MusicBox2 PROC uses cx eax
+; Plays a music.
+;
+; Receives: Nothing.
+;
+; Returns: Nothing.
+;--------------------------------------------------------------------------------
+        push    si
+        push    di
+        mov     cx, LENGTHOF music2
+        lea     si, cs:[music2]
+        lea     di, cs:[speed2]
+@@:
+        mov     ax, deftime*10
+        movzx   bx, BYTE PTR cs:[di]
+        mul     bx
+        mov     bx, cs:[si]
+        INVOKE  PlaySound, bx, deftime
+        mov     eax, deftime*2
+        call    Delay
+        add     si, TYPE WORD
+        inc     di
+        loop    @B
+
+        pop     di
+        pop     si
+        ret
+MusicBox2 ENDP
+
 int9_handler PROC FAR
-        sti
-        pushf
         push    ax
         push    bx
-
-L3:     in      al, kybd_port                           ; read keyboard port
-
+        in      al, kybd_port                           ; read keyboard port
+        push    ax
+        pushf
+        BYTE    9ah
+old_interrupt9 DWORD ?
+        pop     ax
+        cli
+        
         .IF     al == 02h                               ; 1
         mov     bx, t_1Cu
         .ELSEIF al == 02h                               ; 2
@@ -264,6 +297,8 @@ L3:     in      al, kybd_port                           ; read keyboard port
 
         .ELSEIF al == 01h                               ; ESC
         call    MusicBox
+        .ELSEIF al == 3bh                               ; ESC
+        call    MusicBox2
         jmp     to_int9
 
         .ELSE
@@ -275,24 +310,20 @@ L3:     in      al, kybd_port                           ; read keyboard port
 to_int9:
         pop     bx
         pop     ax
-        popf
-        jmp     cs:[old_interrupt9]               ; jump to INT 9 routine
-old_interrupt9 DWORD ?
+        iret
 spkst   WORD    ?
-comment *
-music   WORD    t_2C, t_2C, t_2G, t_2G, t_2A, t_2A, t_2G
-        WORD    t_2F, t_2F, t_2E, t_2E, t_2D, t_2D, t_2C
-        WORD    t_2G, t_2G, t_2F, t_2F, t_2E, t_2E, t_2D
-        WORD    t_2G, t_2G, t_2F, t_2F, t_2E, t_2E, t_2D
-        WORD    t_2C, t_2C, t_2G, t_2G, t_2A, t_2A, t_2G
-        WORD    t_2F, t_2F, t_2E, t_2E, t_2D, t_2D, t_2C
-speed   BYTE    1,1,1,1,1,1,2
+music2  WORD    t_2C, t_2C, t_2G, t_2G, t_2A, t_2A, t_2G,
+                t_2F, t_2F, t_2E, t_2E, t_2D, t_2D, t_2C,
+                t_2G, t_2G, t_2F, t_2F, t_2E, t_2E, t_2D,
+                t_2G, t_2G, t_2F, t_2F, t_2E, t_2E, t_2D,
+                t_2C, t_2C, t_2G, t_2G, t_2A, t_2A, t_2G,
+                t_2F, t_2F, t_2E, t_2E, t_2D, t_2D, t_2C
+speed2  BYTE    1,1,1,1,1,1,2
         BYTE    1,1,1,1,1,1,2
         BYTE    1,1,1,1,1,1,2
         BYTE    1,1,1,1,1,1,2
         BYTE    1,1,1,1,1,1,2
         BYTE    1,1,1,1,1,1,2
-        *
 music   WORD    t_2G, t_2E, t_2E, t_2F, t_2D, t_2D,
                 t_2C, t_2E, t_2G, t_2G, t_2E,
                 t_2D, t_2D, t_2D, t_2D, t_2D, t_2E, t_2F,
