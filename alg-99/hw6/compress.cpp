@@ -305,6 +305,7 @@ static bool extract(FILE *in, FILE *out)
 			if (c == EOF) return false;
 			u.ch[i] = c;
 		}
+		if (u.num == 0u) return true;
 		c = fgetc(in);
 		if (c == EOF) return false;
 		for (int i=0; i<u.num; ++i)
