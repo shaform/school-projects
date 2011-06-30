@@ -1,3 +1,6 @@
+#ifndef SIC_H
+#define SIC_H
+
 #include <cstring>
 #include <set>
 
@@ -25,3 +28,5 @@ class Optab : public std::set<Opcode> {
 };
 
 extern Optab OPTAB;
+// ------------------------------------------------------------------ //
+#endif
