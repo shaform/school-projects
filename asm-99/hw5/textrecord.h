@@ -26,7 +26,6 @@ class Recoder {
 			while (len--) {
 				if (tr.full()) flush();
 				sprintf(&tr.obj[tr.cursor], "%02X", (d >> 8*len) & 0xff);
-				printf("output: %02X\n", (d >> 8*len) & 0xff);
 				tr.cursor += 2;
 				tr.obj[tr.cursor] = '\0';
 			}

@@ -6,7 +6,15 @@
 
 #include "sicxeasm.h"
 #include "textrecord.h"
+#include "addr.h"
+#include "symbol.h"
 using namespace std;
+
+struct Mod {
+	addr_t start_addr;
+	addr_t sz;
+	Mod(addr_t sa, addr_t s) : start_addr(sa), sz(s) {}
+};
 
 struct Line {
 	char label[9];
@@ -22,6 +30,9 @@ struct Line {
 	bool index;
 	bool literal;
 };
+typedef map<string, Symbol>::iterator SYMIt;
+addr_t REG[256];
+bool SIC[256];
 
 
 
@@ -40,31 +51,38 @@ struct Line {
 // *OPERAND*
 // [byte]+ [expr]*
 //
-const int MAXPG = 6;
 
 class Assembler {
 	public:
-		Assembler(FILE *i, FILE *m, FILE *o) : in(i), middle(m), out(o), nobase(true) {}
+		Assembler(FILE *i, FILE *m, FILE *o)
+			: in(i), middle(m), out(o), start_addr(0), LOCCTR(0), nobase(true), lt(0) {}
 		void assemble()
 		{
 			pass1();
 			rewind(middle);
 			pass2();
 		}
-
 	private:
+		// Files
 		FILE *in, *middle, *out;
+
+
+		// Temporary variables.
 		Line line;
-		map<string, addr_t> SYMTAB;
-		char prg_name[MAXPG+1], sec_name[MAXPG+1];
+		char buff_i[MAXL], buff[MAXL];
 		char buff_t[MAXL];
 
+		// Internal data for assembly
+		char prg_name[MAXPG+1], sec_name[MAXPG+1];
 		addr_t start_addr, LOCCTR;
 		addr_t prg_length;
 		addr_t base;
 		bool nobase;
+		map<string, Symbol> SYMTAB;
+		vector<Literal> LITTAB;
+		unsigned lt;
 
-		// pass1
+		vector<Mod> M;
 		void pass1()
 		{
 			memset(prg_name, ' ', sizeof(prg_name));
@@ -76,16 +94,24 @@ class Assembler {
 					prg_name[i] = line.label[i];
 				LOCCTR = start_addr;
 				p1_read_line();
-			} else
-				start_addr = LOCCTR = 0;
+			}
 
 			while (!(!line.format && strcmp(line.mnem, "END") == 0)) {
+				if (feof(in)) {
+					fprintf(stderr, "## No END directive found.\n");
+					break;
+				}
+
 				if (line.label[0]) {
 					if (SYMTAB.find(line.label) != SYMTAB.end()) {
 						print_line();
 						fprintf(stderr, "## Duplicate symbol %s.\n", line.label);
+					} else if (strcmp(line.mnem, "EQU") == 0) {
+						SYMTAB.insert(make_pair(line.label, Symbol(line.operand[0])));
+						p1_read_line();
+						continue;
 					} else {
-						SYMTAB.insert(make_pair(line.label, LOCCTR));
+						SYMTAB.insert(make_pair(line.label, Symbol(LOCCTR)));
 					}
 				}
 
@@ -122,16 +148,31 @@ class Assembler {
 						int t;
 						sscanf(line.operand[0], "%d", &t);
 						LOCCTR += t*3;
+					} else if (strcmp(line.mnem, "LTORG") == 0) {
+						printf("LTORG !!!!!!!!!!!!!!\n");
+						p1_put_lt();
+					} else {
+						printf("WRONG!! %s\n", line.mnem);
+						print_line();
 					}
 				}
-
 				p1_write_line();
 				p1_read_line();
 			}
+			p1_put_lt();
 
 			p1_write_line();
 			prg_length = LOCCTR - start_addr;
 
+		}
+		void p1_put_lt()
+		{
+			while (lt < LITTAB.size()) {
+				LITTAB[lt].addr = LOCCTR;
+				LOCCTR += LITTAB[lt].bytes.length()/2;
+				write_byte(LITTAB[lt].bytes.c_str());
+				++lt;
+			}
 		}
 		void pass2()
 		{
@@ -140,31 +181,38 @@ class Assembler {
 			Recoder recoder(start_addr, out);
 			char f;
 			while (fscanf(middle, " %c", &f) == 1) {
-				LOCCTR += f-'0';
+				printf("t2: %x\n", LOCCTR);
+				if (isdigit(f)) LOCCTR += f-'0';
 				if (f == '0') {
 					read_line(middle);
+					printf("ine: %s\n", buff);
 					int t;
-					sscanf(buff, "%s%d", buff_t, &t);
+					sscanf(buff, "%s %d", buff_t, &t);
 					if (strcmp(buff_t, "RESW") == 0) {
 						recoder.res(t*3);
+						LOCCTR += t*3;
 					} else if (strcmp(buff_t, "RESB") == 0) {
 						recoder.res(t);
+						LOCCTR += t;
 					} else if (strcmp(buff_t, "NOBASE") == 0) {
 						nobase = true;
 					} else if (strcmp(buff_t, "BASE") == 0) {
-						sscanf(buff, "%s%s", &buff_t, &buff_t);
-						map<string, addr_t>::iterator it = SYMTAB.find(buff_t);
+						sscanf(buff, "%s%s", buff_t, buff_t);
+						SYMIt it = SYMTAB.find(buff_t);
 						if (it!=SYMTAB.end()) {
 							nobase = false;
-							base = it->second;
+							base = it->second.value;
 						} else 
 							fprintf(stderr, "##Undefined symbol: %s\n", buff_t);
 					} else if (strcmp(buff_t, "END") == 0) {
 						recoder.flush();
-						sscanf(buff, "%s%s", &buff_t, &buff_t);
-						map<string, addr_t>::iterator it = SYMTAB.find(buff_t);
+						sscanf(buff, "%s%s", buff_t, buff_t);
+						for (unsigned i=0; i<M.size(); ++i) {
+							fprintf(out, "M%06X%02X\n", M[i].start_addr, M[i].sz);
+						}
+						SYMIt it = SYMTAB.find(buff_t);
 						if (it!=SYMTAB.end())
-							fprintf(out, "E%06X\n", it->second);
+							fprintf(out, "E%06X\n", it->second.value);
 						else 
 							fprintf(stderr, "##Undefined symbol: %s\n", buff_t);
 
@@ -175,29 +223,41 @@ class Assembler {
 					recoder.insert(buff_t);
 				} else if (f == '2') {
 					read_line(middle);
+					printf("ine: %s\n", buff);
 					addr_t op = 0, r1 = 0, r2 = 0;
 					sscanf(buff, "%X%X%X", &op, &r1, &r2);
-					recoder.insert((op << 14) | (r1 << 8) | r2, 2);
+					recoder.insert((op << 8) | (r1 << 4) | r2, 2);
 				} else if (f == '3') {
 					read_line(middle);
+					printf("ine: %s\n", buff);
 					addr_t op = 0, n = 0, i = 0, x = 0;
+					memset(buff_t, 0, sizeof(buff_t));
 					sscanf(buff, "%X %X%X%X %s", &op, &n, &i, &x, buff_t);
-					map<string, addr_t>::iterator it = SYMTAB.find(buff_t);
+					const char *s = buff_t;
+					Addr ad = resolve(s);
 					if (!(n|i)) op |= 3;
-					printf("insert started.\n");
-					recoder.insert((op << 16) | (n << 17) | (i << 16) | (x << 15) | calc_addr(it->second, false), 3);
-					printf("insert ended.\n");
+					addr_t ins = (op << 16) | (n << 17) | (i << 16) | (x << 15);
+					ins |= calc_addr(ad.addr, false, ad.relative);
+					if (SIC[op & 0xfc] && ((ins >> 13) & 3) == 3) ins ^= 3 << 13;
+					if (ad.relative && ((((ins >> 13) & 1u) ^ ((ins >> 14) & 1u)) == 0))
+						M.push_back(Mod(LOCCTR - 2, 3));
+					recoder.insert(ins, 3);
 				} else if (f == '4') {
 					read_line(middle);
 					addr_t op = 0, n = 0, i = 0, x = 0;
-					sscanf(buff, "%X%X%X%X %s", &op, &n, &i, &x, buff_t);
-					map<string, addr_t>::iterator it = SYMTAB.find(buff_t);
+					memset(buff_t, 0, sizeof(buff_t));
+					sscanf(buff, "%X %X%X%X %s", &op, &n, &i, &x, buff_t);
+					const char *s = buff_t;
+					Addr ad = resolve(s);
 					if (!(n|i)) op |= 3;
-					if (!(n|i)) op |= 3;
-					printf("4op :%02x\n", op);
-					recoder.insert((op << 24) | (n << 25) | (i << 24) | (x << 23) | calc_addr(it->second, true), 4);
+					addr_t ins = (op << 24) | (n << 25) | (i << 24) | (x << 23);
+					ins |= calc_addr(ad.addr, true);
+					if (ad.relative && ((((ins >> 21) & 1u) ^ ((ins >> 22) & 1u)) == 0))
+						M.push_back(Mod(LOCCTR - 3, 5));
+					recoder.insert(ins, 4);
 				} else if (f == '-') {
 					fscanf(middle, "%s", buff_t);
+					LOCCTR += strlen(buff_t)/2;
 					recoder.insert(buff_t);
 				} else {
 					fprintf(stderr, "Invaild immediate file syntax, aborting...\n%c\n", f);
@@ -207,21 +267,22 @@ class Assembler {
 			recoder.flush();
 		}
 
-		addr_t calc_addr(addr_t dest, bool ext)
+		// Generates a appropriate address syntax.
+		addr_t calc_addr(int dest, bool ext, bool relative = true)
 		{
-			if (ext) {
+			if (ext)
 				return (1 << 20) | dest;
-			} else if (dest <= LOCCTR + 2047 && dest + 2048 >= LOCCTR) {
-				printf("wow %x\n", dest-LOCCTR);
+			else if (!relative && dest <= 2047 && dest >= -2048)
+				return (3 << 13) | dest;
+			else if (dest <= LOCCTR + 2047 && dest + 2048 >= LOCCTR)
 				return (1 << 13) | ((dest-LOCCTR) & ((1u<<12)-1u));
-			} else if (!nobase && dest >= base && dest <= base + 4095) {
+			else if (!nobase && dest >= base && dest <= base + 4095)
 				return (1 << 14) | (dest-base);
-			} else {
+			else {
 				fprintf(stderr, "## Address out of range.\n");
 				return 1 << 13;
 			}
 		}
-		char buff_i[MAXL], buff[MAXL];
 		bool p1_read_line()
 		{
 			while (true) {
@@ -262,6 +323,8 @@ class Assembler {
 					} else if (buff[i] == ' ') continue;
 					line.mnem[j++] = buff[i];
 				}
+				printf("test: %s\n", line.mnem);
+				printf("%s\n", buff);
 
 				Optab::iterator it = OPTAB.find(Opcode(line.mnem));
 				if (it == OPTAB.end()) {
@@ -305,12 +368,26 @@ class Assembler {
 							} else if (buff[i] == 'X') {
 								if (!store_x(buff+i, line.operand[0], 35-i+1-3))
 									l_error = true;
+							} else if (buff[i] == '*' && buff[i+1] == ' ') {
+								sprintf(line.operand[0], "%06X", LOCCTR);
 							} else
 								l_error = true;
 
 							if (l_error) {
 								print_line();
 								fprintf(stderr, "## Invalid literal.\n");
+							} else {
+								unsigned i;
+								for (i=0; i<LITTAB.size(); ++i) {
+									if (LITTAB[i].bytes == line.operand[0])
+										break;
+								}
+								if (i==LITTAB.size())
+									LITTAB.push_back(Literal(0, line.operand[0]));
+								line.operand[0][0] = '=';
+								sprintf(&line.operand[0][1],
+										"%06X", i);
+								line.operand[0][5] = '\0';
 							}
 							break;
 						}
@@ -342,6 +419,12 @@ class Assembler {
 				if (l_error) continue;
 				else break;
 			}
+			if (line.format == 2) {
+				if (strcmp("SW", line.operand[0]) == 0)
+					line.operand[0][0] = 'W';
+				if (strcmp("SW", line.operand[1]) == 0)
+					line.operand[1][0] = 'W';
+			}
 
 			return true;
 		}
@@ -351,8 +434,8 @@ class Assembler {
 				if (line.format > 2) fprintf(middle, "%d %02X %1x %1x %1x %s\n",
 						line.format, line.opcode, line.indirect, line.immediate,
 						line.index, line.operand[0]);
-				else if (line.format == 2) fprintf(middle, "2 %02X %s %s\n",
-						line.opcode, line.operand[0], line.operand[1]);
+				else if (line.format == 2) fprintf(middle, "2 %02X %x %x\n",
+						line.opcode, REG[line.operand[0][0]], REG[line.operand[1][0]]);
 				else fprintf(middle, "1 %02X\n", line.opcode);
 
 			} else if (strcmp(line.mnem, "BYTE") == 0) {
@@ -362,7 +445,11 @@ class Assembler {
 		}
 		void p1_write_byte()
 		{
-			fprintf(middle, "- %s\n", line.operand[0]);
+			write_byte(line.operand[0]);
+		}
+		void write_byte(const char *s)
+		{
+			fprintf(middle, "- %s\n", s);
 		}
 		void read_line(FILE *f)
 		{
@@ -437,13 +524,120 @@ class Assembler {
 			if (i==0 || *from != '\'') return false;
 			return true;
 		}
+		Addr resolve(const char *&str)
+		{
+			Addr operl = resolveT(str);
+			while (*str == '+' || *str == '-') {
+				char op = *(str++);
+				Addr operr = resolveT(str);
+				if (op == '+')
+					operl += operr;
+				else
+					operl -= operr;
+			}
+			return operl;
+		}
+		Addr resolveT(const char *&str)
+		{
+			Addr operl = resolveF(str);
+			while (*str == '*' || *str == '/') {
+				char op = *(str++);
+				Addr operr = resolveF(str);
+				if (op == '*')
+					operl *= operr;
+				else
+					operl /= operr;
+			}
+			return operl;
+		}
+		Addr resolveF(const char *&str)
+		{
+			if (*str == '(') {
+				++str;
+				Addr res = resolve(str);
+				if (*str != ')') res.error = true;
+				else ++str;
+				return res;
+			} else
+				return resolveN(str);
+		}
+		Addr resolveN(const char *&str)
+		{
+			Addr res;
+			if (isdigit(*str)) {
+				while (isdigit(*str)) {
+					res.addr *= 10;
+					res.addr += *str - '0';
+					++str;
+				}
+			} else if (isalpha(*str)) {
+				char t[MAXSYM+1];
+				for (int i=0; i<MAXSYM; ++i)
+					if (isalnum(*str)) t[i] = *(str++);
+					else {
+						t[i] = '\0';
+						break;
+					}
+				t[MAXSYM] = '\0';
+				SYMIt it = SYMTAB.find(t);
+				if (it == SYMTAB.end())
+					res.error = true;
+				else if (it->second.is_recursive()) {
+					const char *i = it->second.def.c_str();
+					res = resolve(i);
+				} else {
+					res.relative = !it->second.is_absolute();
+					res.addr = it->second.value;
+					if (it->second.is_external()) {
+						res.ext.push_back(AddrRef(t, true));
+					}
+				}
+			} else if (*str != '\0')
+				res.error = true;
+			return res;
+		}
 };
-
 
 // ------------------------------------------------------------------ //
 int main(int argc, char *argv[])
 {
 	FILE *in, *middle, *out;
+	REG['A'] = 0;
+	REG['X'] = 1;
+	REG['L'] = 2;
+	REG['B'] = 3;
+	REG['S'] = 4;
+	REG['T'] = 5;
+	REG['F'] = 6;
+	REG['P'] = 8;
+	REG['W'] = 9;
+	SIC[0x18] = true;
+	SIC[0x40] = true;
+	SIC[0x28] = true;
+	SIC[0x24] = true;
+	SIC[0x3c] = true;
+	SIC[0x30] = true;
+	SIC[0x34] = true;
+	SIC[0x38] = true;
+	SIC[0x48] = true;
+	SIC[0x00] = true;
+	SIC[0x50] = true;
+	SIC[0x08] = true;
+	SIC[0x04] = true;
+	SIC[0x20] = true;
+	SIC[0x44] = true;
+	SIC[0xd8] = true;
+	SIC[0x4c] = true;
+	SIC[0x0c] = true;
+	SIC[0x54] = true;
+	SIC[0x14] = true;
+	SIC[0xe8] = true;
+	SIC[0x10] = true;
+	SIC[0x1c] = true;
+	SIC[0xe0] = true;
+	SIC[0x2c] = true;
+	SIC[0xdc] = true;
+
 
 	if (argc != 2) {
 		fprintf(stderr, "usage: sicxeasm INPUTFILE\n");

@@ -9,6 +9,7 @@ const int NUM_INC = 59;
 const int NUM_DIR = 15;
 const int NUM_OP = NUM_INC + NUM_DIR;
 typedef unsigned addr_t;
+const int MAXPG = 6;
 
 struct Opcode {
 	char mnem[7];
@@ -28,5 +29,6 @@ class Optab : public std::set<Opcode> {
 };
 
 extern Optab OPTAB;
+
 // ------------------------------------------------------------------ //
 #endif
