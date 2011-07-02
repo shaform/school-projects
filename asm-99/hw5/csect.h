@@ -247,7 +247,7 @@ struct CSection {
 			} else if (f == 3) {
 				const char *s = l->oper[0];
 				Addr ad = resolve(s, LOCCTR-3);
-				if (*s != '\0') fprintf(stderr, "## Invalid operand: %s\n", l->oper[0]);
+				if (*s != '\0' || ad.error) fprintf(stderr, "## Invalid operand: %s\n", l->oper[0]);
 				addr_t op = l->opcode, n = l->idi, i = l->imm, x = l->idx;
 				if (!(n|i)) op |= 3;
 				addr_t ins = (op << 16) | (n << 17) | (i << 16) | (x << 15);
@@ -263,7 +263,7 @@ struct CSection {
 			} else if (f == 4) {
 				const char *s = l->oper[0];
 				Addr ad = resolve(s, LOCCTR-4);
-				if (*s != '\0') fprintf(stderr, "## Invalid operand: %s\n", l->oper[0]);
+				if (*s != '\0' || ad.error) fprintf(stderr, "## Invalid operand: %s\n", l->oper[0]);
 				addr_t op = l->opcode, n = l->idi, i = l->imm, x = l->idx;
 				if (!(n|i)) op |= 3;
 				addr_t ins = (op << 24) | (n << 25) | (i << 24) | (x << 23);

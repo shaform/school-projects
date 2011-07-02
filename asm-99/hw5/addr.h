@@ -19,7 +19,7 @@ struct Addr {
 	Addr() : addr(0), relative(0), error(false) {}
 	Addr &operator*=(const Addr &opr)
 	{
-		if (relative || opr.relative || ext.size() || opr.ext.size())
+		if (relative || opr.relative || ext.size() || opr.ext.size() || opr.error)
 			error = true;
 		else
 			addr *= opr.addr;
@@ -28,7 +28,7 @@ struct Addr {
 	}
 	Addr &operator/=(const Addr &opr)
 	{
-		if (relative || opr.relative || ext.size() || opr.ext.size())
+		if (relative || opr.relative || ext.size() || opr.ext.size() || opr.error)
 			error = true;
 		else
 			addr /= opr.addr;
@@ -40,6 +40,7 @@ struct Addr {
 		relative += opr.relative;
 		for (unsigned i=0; i<opr.ext.size(); ++i)
 			ext.push_back(opr.ext[i]);
+		if (opr.error) error = true;
 		return *this;
 	}
 	Addr &operator-=(const Addr &opr)
@@ -51,7 +52,7 @@ struct Addr {
 			t.positive = !t.positive;
 			ext.push_back(t);
 		}
-
+		if (opr.error) error = true;
 		return *this;
 	}
 };
