@@ -13,7 +13,7 @@ struct Symbol {
 
 	Symbol() : value(0), absolute(true), external(false) {}
 	Symbol(addr_t ad) : value(ad), absolute(false), external(false) {}
-	Symbol(string d) : value(0), def(d), absolute(false), external(false) {}
+	Symbol(addr_t ad, string d) : value(ad), def(d), absolute(false), external(false) {}
 	Symbol(addr_t ad, bool ab) : value(ad), absolute(ab), external(false) {}
 	Symbol(addr_t ad, bool ab, bool ext) : value(ad), absolute(ab), external(ext) {}
 };

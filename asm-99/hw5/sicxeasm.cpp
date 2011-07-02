@@ -1,6 +1,7 @@
 #include <cstdio>
-#include <string>
 #include <cstring>
+#include <string>
+#include <algorithm>
 #include <set>
 #include <map>
 
@@ -107,7 +108,8 @@ class Assembler {
 						print_line();
 						fprintf(stderr, "## Duplicate symbol %s.\n", line.label);
 					} else if (strcmp(line.mnem, "EQU") == 0) {
-						SYMTAB.insert(make_pair(line.label, Symbol(line.operand[0])));
+						printf("SSS%s\n", line.operand[0]);
+						SYMTAB.insert(make_pair(line.label, Symbol(LOCCTR, string(line.operand[0]))));
 						p1_read_line();
 						continue;
 					} else {
@@ -234,7 +236,7 @@ class Assembler {
 					memset(buff_t, 0, sizeof(buff_t));
 					sscanf(buff, "%X %X%X%X %s", &op, &n, &i, &x, buff_t);
 					const char *s = buff_t;
-					Addr ad = resolve(s);
+					Addr ad = resolve(s, LOCCTR-3);
 					if (!(n|i)) op |= 3;
 					addr_t ins = (op << 16) | (n << 17) | (i << 16) | (x << 15);
 					ins |= calc_addr(ad.addr, false, ad.relative);
@@ -248,7 +250,7 @@ class Assembler {
 					memset(buff_t, 0, sizeof(buff_t));
 					sscanf(buff, "%X %X%X%X %s", &op, &n, &i, &x, buff_t);
 					const char *s = buff_t;
-					Addr ad = resolve(s);
+					Addr ad = resolve(s, LOCCTR-4);
 					if (!(n|i)) op |= 3;
 					addr_t ins = (op << 24) | (n << 25) | (i << 24) | (x << 23);
 					ins |= calc_addr(ad.addr, true);
@@ -387,7 +389,7 @@ class Assembler {
 								line.operand[0][0] = '=';
 								sprintf(&line.operand[0][1],
 										"%06X", i);
-								line.operand[0][5] = '\0';
+								line.operand[0][7] = '\0';
 							}
 							break;
 						}
@@ -524,12 +526,12 @@ class Assembler {
 			if (i==0 || *from != '\'') return false;
 			return true;
 		}
-		Addr resolve(const char *&str)
+		Addr resolve(const char *&str, addr_t ad)
 		{
-			Addr operl = resolveT(str);
+			Addr operl = resolveT(str, ad);
 			while (*str == '+' || *str == '-') {
 				char op = *(str++);
-				Addr operr = resolveT(str);
+				Addr operr = resolveT(str, ad);
 				if (op == '+')
 					operl += operr;
 				else
@@ -537,12 +539,12 @@ class Assembler {
 			}
 			return operl;
 		}
-		Addr resolveT(const char *&str)
+		Addr resolveT(const char *&str, addr_t ad)
 		{
-			Addr operl = resolveF(str);
+			Addr operl = resolveF(str, ad);
 			while (*str == '*' || *str == '/') {
 				char op = *(str++);
-				Addr operr = resolveF(str);
+				Addr operr = resolveF(str, ad);
 				if (op == '*')
 					operl *= operr;
 				else
@@ -550,18 +552,18 @@ class Assembler {
 			}
 			return operl;
 		}
-		Addr resolveF(const char *&str)
+		Addr resolveF(const char *&str, addr_t ad)
 		{
 			if (*str == '(') {
 				++str;
-				Addr res = resolve(str);
+				Addr res = resolve(str, ad);
 				if (*str != ')') res.error = true;
 				else ++str;
 				return res;
 			} else
-				return resolveN(str);
+				return resolveN(str, ad);
 		}
-		Addr resolveN(const char *&str)
+		Addr resolveN(const char *&str, addr_t ad)
 		{
 			Addr res;
 			if (isdigit(*str)) {
@@ -584,7 +586,7 @@ class Assembler {
 					res.error = true;
 				else if (it->second.is_recursive()) {
 					const char *i = it->second.def.c_str();
-					res = resolve(i);
+					res = resolve(i, it->second.value);
 				} else {
 					res.relative = !it->second.is_absolute();
 					res.addr = it->second.value;
@@ -592,6 +594,16 @@ class Assembler {
 						res.ext.push_back(AddrRef(t, true));
 					}
 				}
+			} else if (*str == '=') {
+				unsigned t;
+				sscanf(++str, "%X", &t);
+				str += 6;
+				res.relative = 1;
+				res.addr = LITTAB[t].addr;
+			} else if (*str == '*') {
+				res.relative = 1;
+				res.addr = ad;
+				++str;
 			} else if (*str != '\0')
 				res.error = true;
 			return res;
