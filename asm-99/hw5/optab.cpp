@@ -6,6 +6,9 @@ struct Record {
 	char format;
 };
 
+addr_t REG[256];
+bool SIC[256];
+
 // The opcodes to be inserted to optab.
 Record oprecord[NUM_OP] = {
 
