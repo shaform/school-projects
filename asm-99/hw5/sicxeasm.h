@@ -2,6 +2,7 @@
 #define SIC_H
 
 #include <cstring>
+#include <string>
 #include <cctype>
 #include <set>
 
@@ -19,7 +20,10 @@ extern bool SIC[256];
 struct Mod {
 	addr_t start_addr;
 	addr_t sz;
+	bool pos;
+	std::string sym;
 	Mod(addr_t sa, addr_t s) : start_addr(sa), sz(s) {}
+	Mod(addr_t sa, addr_t s, bool p, std::string st) : start_addr(sa), sz(s), pos(p), sym(st) {}
 };
 struct Opcode {
 	char mnem[7];

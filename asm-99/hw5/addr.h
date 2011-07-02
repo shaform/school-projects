@@ -49,7 +49,7 @@ struct Addr {
 		for (unsigned i=0; i<opr.ext.size(); ++i) {
 			AddrRef t = opr.ext[i];
 			t.positive = !t.positive;
-			ext.push_back(opr.ext[i]);
+			ext.push_back(t);
 		}
 
 		return *this;

@@ -61,6 +61,7 @@ class Assembler {
 					if (css[0].start_addr == 0u) {
 						css.back().more_sect = true;
 						css.push_back(CSection(&fh, l->label, "0"));
+						fh.p1_read_line();
 						continue;
 					}
 					fprintf(stderr, "## Control section supported only in relocatable program.\n");
@@ -69,13 +70,15 @@ class Assembler {
 				}
 				break;
 			}
+			css[0].end_str = l->oper[0];
 
 		}
 		void pass2()
 		{
-			fh.p2_read_line();
-			for (vector<CSection>::iterator it = css.begin(); it != css.end(); ++it)
+			for (vector<CSection>::iterator it = css.begin(); it != css.end(); ++it) {
+				fh.p2_read_line();
 				it->pass2();
+			}
 		}
 };
 

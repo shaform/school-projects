@@ -24,6 +24,7 @@ struct CSection {
 	bool main_sect;
 	bool more_sect;
 	Line *l;
+	string end_str;
 
 	void clear_name()
 	{
@@ -47,15 +48,15 @@ struct CSection {
 	}
 
 	// Generates a appropriate address syntax.
-	addr_t calc_addr(int dest, bool ext, bool relative = true)
+	addr_t calc_addr(int dest, bool ext, bool relative = true, bool enable = true)
 	{
 		if (ext)
 			return (1 << 20) | dest;
 		else if (!relative && dest <= 2047 && dest >= -2048)
 			return (3 << 13) | dest;
-		else if (dest <= LOCCTR + 2047 && dest + 2048 >= LOCCTR)
+		else if (enable && dest <= LOCCTR + 2047 && dest + 2048 >= LOCCTR)
 			return (1 << 13) | ((dest-LOCCTR) & ((1u<<12)-1u));
-		else if (!nobase && dest >= base && dest <= base + 4095)
+		else if (enable && !nobase && dest >= base && dest <= base + 4095)
 			return (1 << 14) | (dest-base);
 		else {
 			fprintf(stderr, "## Address out of range.\n");
@@ -136,10 +137,24 @@ struct CSection {
 				} else if (l->op("LTORG")) {
 					p1_put_lt();
 				} else if (l->op("EXTDEF")) {
+					for (unsigned i=0; i<fh->hack.size(); ++i) {
+						extdef.push_back(fh->hack[i]);
+					}
+					fprintf(fh->mid, "0 EXTDEF\n");
 				} else if (l->op("EXTREF")) {
+					for (unsigned i=0; i<fh->hack.size(); ++i) {
+						if (SYMTAB.find(fh->hack[i]) != SYMTAB.end()) {
+							fprintf(stderr, "## Duplicate symbol %s.\n", fh->hack[i].c_str());
+							continue;
+						} else {
+							SYMTAB.insert(make_pair(fh->hack[i], Symbol(0, true, true)));
+							extref.push_back(fh->hack[i]);
+						}
+					}
+					fprintf(fh->mid, "0 EXTREF\n");
 				} else {
-					fprintf(stderr, "FIXME!!\n");
-					fh->print_line();
+					//fprintf(stderr, "FIXME!!\n");
+					//fh->print_line();
 				}
 			}
 			fh->p1_write_line();
@@ -156,7 +171,7 @@ struct CSection {
 		LOCCTR = start_addr;
 		fprintf(fh->out, "H%s%06X%06X\n", sec_name, start_addr, sec_length);
 		Recoder recoder(start_addr, fh->out);
-		while (!(l->op("END") || fh->p2_eof())) {
+		while (!(l->op("END") || (l->op("CSECT")) ||  fh->p2_eof())) {
 			char f = l->format;
 			LOCCTR += f;
 			if (f == 0) {
@@ -168,6 +183,20 @@ struct CSection {
 				} else if (l->op("RESB")) {
 					recoder.res(t);
 					LOCCTR += t;
+				} else if (l->op("WORD")) {
+					const char *s = l->oper[0];
+					Addr ad = resolve(s, LOCCTR);
+					if (ad.error) {
+						fprintf(stderr, "##Wrong WORD def %s\n", l->oper[0]);
+					} else {
+						recoder.insert(ad.addr, 3);
+						if (ad.relative) M.push_back(Mod(LOCCTR, 6));
+						for (unsigned i=0; i<ad.ext.size(); ++i)
+							M.push_back(Mod(LOCCTR, 6,
+										ad.ext[i].positive,
+										ad.ext[i].symbol));
+					}
+					LOCCTR += 3;
 				} else if (l->op("NOBASE")) {
 					nobase = true;
 				} else if (l->op("BASE")) {
@@ -177,6 +206,33 @@ struct CSection {
 						base = it->second.value;
 					} else 
 						fprintf(stderr, "##Undefined symbol: %s\n", l->oper[0]);
+				} else if (l->op("EXTDEF")) {
+					fprintf(fh->out, "%c", 'D');
+					for (unsigned i=0; i<extdef.size(); ++i) {
+						if (SYMTAB.find(extdef[i]) == SYMTAB.end()) {
+							fprintf(stderr, "##Undefined symbol: %s\n", fh->hack[i].c_str());
+							continue;
+						} else {
+							char s[7];
+							memset(s, ' ', sizeof(s));
+							s[6] = '\0';
+							for (int j=0; extdef[i][j]; ++j)
+								s[j] = extdef[i][j];
+							fprintf(fh->out, "%s%06X", s, SYMTAB.find(extdef[i])->second.value);
+						}
+					}
+					fprintf(fh->out, "\n");
+				} else if (l->op("EXTREF")) {
+					fprintf(fh->out, "%c", 'R');
+					for (unsigned i=0; i<extref.size(); ++i) {
+						char s[7];
+						memset(s, ' ', sizeof(s));
+						s[6] = '\0';
+						for (int j=0; extref[i][j]; ++j)
+							s[j] = extref[i][j];
+						fprintf(fh->out, "%s", s);
+					}
+					fprintf(fh->out, "\n");
 				} else if (l->op("-")) {
 					LOCCTR += strlen(l->oper[0])/2;
 					recoder.insert(l->oper[0]);
@@ -195,10 +251,14 @@ struct CSection {
 				addr_t op = l->opcode, n = l->idi, i = l->imm, x = l->idx;
 				if (!(n|i)) op |= 3;
 				addr_t ins = (op << 16) | (n << 17) | (i << 16) | (x << 15);
-				ins |= calc_addr(ad.addr, false, ad.relative);
+				ins |= calc_addr(ad.addr, false, ad.relative, ad.ext.empty());
 				if (SIC[op & 0xfc] && ((ins >> 13) & 3) == 3) ins ^= 3 << 13;
 				if (ad.relative && ((((ins >> 13) & 1u) ^ ((ins >> 14) & 1u)) == 0))
 					M.push_back(Mod(LOCCTR - 2, 3));
+				for (unsigned i=0; i<ad.ext.size(); ++i)
+					M.push_back(Mod(LOCCTR -2, 3,
+								ad.ext[i].positive,
+								ad.ext[i].symbol));
 				recoder.insert(ins, 3);
 			} else if (f == 4) {
 				const char *s = l->oper[0];
@@ -210,6 +270,10 @@ struct CSection {
 				ins |= calc_addr(ad.addr, true);
 				if (ad.relative && ((((ins >> 21) & 1u) ^ ((ins >> 22) & 1u)) == 0))
 					M.push_back(Mod(LOCCTR - 3, 5));
+				for (unsigned i=0; i<ad.ext.size(); ++i)
+					M.push_back(Mod(LOCCTR -3, 5,
+								ad.ext[i].positive,
+								ad.ext[i].symbol));
 				recoder.insert(ins, 4);
 			} else {
 				fprintf(stderr, "Invaild immediate file syntax, aborting...\n%c\n", f);
@@ -219,14 +283,22 @@ struct CSection {
 		}
 		recoder.flush();
 		for (unsigned i=0; i<M.size(); ++i) {
-			fprintf(fh->out, "M%06X%02X\n", M[i].start_addr, M[i].sz);
+			if (main_sect && !more_sect)
+				fprintf(fh->out, "M%06X%02X\n", M[i].start_addr, M[i].sz);
+			else {
+				char sign = M[i].pos ? '+' : '-';
+				const char *s = sec_name;
+				if (M[i].sym.size()) s = M[i].sym.c_str();
+				fprintf(fh->out, "M%06X%02X%c%s\n", M[i].start_addr, M[i].sz, sign, s);
+			}
 		}
 		if (main_sect) {
-			SYMIt it = SYMTAB.find(l->oper[0]);
-			if (it!=SYMTAB.end())
-				fprintf(fh->out, "E%06X\n", it->second.value);
+			const char *s = end_str.c_str();
+			Addr ad = resolve(s, LOCCTR);
+			if (!ad.error && ad.ext.empty())
+				fprintf(fh->out, "E%06X\n", ad.addr);
 			else 
-				fprintf(stderr, "##Undefined symbol: %s\n", l->oper[0]);
+				fprintf(stderr, "##Invalid end\n");
 		} else
 			fprintf(fh->out, "E\n");
 		if (more_sect)

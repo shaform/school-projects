@@ -1,6 +1,8 @@
 #ifndef SIC_FILE_H
 #define SIC_FILE_H
 #include <cstdio>
+#include <vector>
+#include <string>
 #include "sicxeasm.h"
 const int MAXOPER = 40;
 
@@ -24,6 +26,7 @@ struct Line {
 class FileHandler {
 	public:
 
+		std::vector<std::string> hack;
 		FileHandler() : in(0), mid(0), out(0) { }
 		~FileHandler() { close(); }
 		bool open(const char *fi, const char *fm = "imme.out", const char *fo = "output.obj")
@@ -50,7 +53,6 @@ class FileHandler {
 		}
 		void close()
 		{
-			printf("closing\n");
 			if (in) { fclose(in); in = 0; }
 			if (mid) { fclose(mid); mid = 0; }
 			if (out) { fclose(out); out = 0; }
@@ -58,6 +60,26 @@ class FileHandler {
 		void rwmid()
 		{
 			rewind(mid);
+		}
+		void store_ext()
+		{
+			hack.clear();
+			char symbol[100];
+			int j=0;
+			for (int i=17; buff[i]; ++i) {
+				if (buff[i] == ' ') continue;
+				if (buff[i] == ',') {
+					if (j) {
+						symbol[j] = '\0';
+						hack.push_back(symbol);
+						j = 0;
+						continue;
+					}
+				}
+				symbol[j++] = buff[i];
+			}
+			symbol[j] = '\0';
+			if (j) hack.push_back(symbol);
 		}
 		bool p1_read_line()
 		{
@@ -118,6 +140,10 @@ class FileHandler {
 
 
 				// Stores the operands.
+				if (strcmp(line.mnem, "EXTREF") == 0 || strcmp(line.mnem, "EXTDEF") == 0) {
+					store_ext();
+					break;
+				}
 
 				for (int i=17, j=0; i<35 && buff[i]; ++i) {
 					if (buff[i] == ' ') continue;
@@ -186,7 +212,7 @@ class FileHandler {
 
 			} else if (strcmp(line.mnem, "BYTE") == 0) {
 				fprintf(mid, "- %s\n", line.oper[1]);
-			} else
+			} else if (strcmp(line.mnem, "EXTREF") != 0 && strcmp(line.mnem, "EXTDEF") != 0)
 				fprintf(mid, "0 %s %s\n", line.mnem, line.oper[0]);
 		}
 		bool p2_read_line()
@@ -202,6 +228,9 @@ class FileHandler {
 				line.format = buff[0] - '0';
 				if (line.format == 0) {
 					sscanf(&buff[2], "%s %s", line.mnem, line.oper[0]);
+					if (strcmp(line.mnem, "EXTDEF") == 0) {
+						store_ext();
+					}
 				} else if (line.format == 1) {
 					sscanf(&buff[2], "%s", line.mnem);
 				} else if (line.format == 2) {
