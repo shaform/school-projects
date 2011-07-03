@@ -8,6 +8,14 @@
 
 typedef map<string, Symbol>::iterator SYMIt;
 
+struct Block {
+	addr_t start_addr;
+	addr_t LOCCTR;
+	addr_t length;
+	string name;
+	Block() : start_addr(0), LOCCTR(0), length(0) {}
+	Block(string s) : start_addr(0), LOCCTR(0), length(0), name(s) {}
+};
 struct CSection {
 	FileHandler *fh;
 	char sec_name[MAXPG+1];
@@ -25,6 +33,8 @@ struct CSection {
 	bool more_sect;
 	Line *l;
 	string end_str;
+	vector<Block> bl;
+	unsigned bt;
 
 	void clear_name()
 	{
@@ -33,18 +43,19 @@ struct CSection {
 	}
 	CSection(FileHandler *fh)
 		: fh(fh), start_addr(0u), LOCCTR(0u), sec_length(0u), nobase(true), lt(0),
-		main_sect(false), more_sect(false), l(fh->get_line())
+		main_sect(false), more_sect(false), l(fh->get_line()), bl(1), bt(0)
 	{
 		clear_name();
 	}
 	CSection(FileHandler *fh, const char *name, const char *addr)
-		: fh(fh), sec_length(0u), nobase(true), lt(0), main_sect(false), more_sect(false), l(fh->get_line())
+		: fh(fh), LOCCTR(0u), sec_length(0u), nobase(true), lt(0),
+		main_sect(false), more_sect(false), l(fh->get_line()), bl(1), bt(0)
 	{
 		clear_name();
 		sscanf(addr, "%d", &start_addr);
 		for (int i=0; i<MAXPG && name[i]; ++i)
 			sec_name[i] = name[i];
-		LOCCTR = start_addr;
+		//LOCCTR = start_addr;
 	}
 
 	// Generates a appropriate address syntax.
@@ -100,11 +111,11 @@ struct CSection {
 					fh->print_line();
 					fprintf(stderr, "## Duplicate symbol %s.\n", l->label);
 				} else if (l->op("EQU")) {
-					SYMTAB.insert(make_pair(l->label, Symbol(LOCCTR, string(l->oper[0]))));
+					SYMTAB.insert(make_pair(l->label, Symbol(LOCCTR, string(l->oper[0]), bt)));
 					fh->p1_read_line();
 					continue;
 				} else {
-					SYMTAB.insert(make_pair(l->label, Symbol(LOCCTR)));
+					SYMTAB.insert(make_pair(l->label, Symbol(LOCCTR, bt)));
 				}
 			}
 
@@ -147,11 +158,27 @@ struct CSection {
 							fprintf(stderr, "## Duplicate symbol %s.\n", fh->hack[i].c_str());
 							continue;
 						} else {
-							SYMTAB.insert(make_pair(fh->hack[i], Symbol(0, true, true)));
+							SYMTAB.insert(make_pair(fh->hack[i], Symbol(0, true, true, 0)));
 							extref.push_back(fh->hack[i]);
 						}
 					}
 					fprintf(fh->mid, "0 EXTREF\n");
+				} else if (l->op("USE")) {
+					bl[bt].LOCCTR = LOCCTR;
+					if (l->oper[0][0] == '\0') {
+						bt = 0;
+						LOCCTR = bl[0].LOCCTR;
+					} else for (bt=1; bt<bl.size(); ++bt) {
+						if (bl[bt].name == l->oper[0]) {
+							LOCCTR = bl[bt].LOCCTR;
+							break;
+						}
+					}
+					// Creates a new block.
+					if (bt==bl.size()) {
+						bl.push_back(Block(l->oper[0]));
+						LOCCTR = 0;
+					}
 				} else {
 					//fprintf(stderr, "FIXME!!\n");
 					//fh->print_line();
@@ -163,12 +190,25 @@ struct CSection {
 		p1_put_lt();
 
 		fh->p1_write_line();
-		sec_length = LOCCTR - start_addr;
+		bl[bt].LOCCTR = LOCCTR;
+		sec_length = 0;
+		for (unsigned i=0; i<bl.size(); ++i) {
+			bl[i].length = bl[i].LOCCTR;
+			bl[i].LOCCTR = bl[i].start_addr = start_addr + sec_length;
+			sec_length += bl[i].length;
+		}
+		for (SYMIt it=SYMTAB.begin(); it!=SYMTAB.end(); ++it) {
+			it->second.value += bl[it->second.bn].start_addr;
+		}
+		for (unsigned i=0; i<LITTAB.size(); ++i) {
+			LITTAB[i].addr += bl[LITTAB[i].bn].start_addr;
+		}
 		return true;
 	}
 	bool pass2()
 	{
 		LOCCTR = start_addr;
+		bt = 0;
 		fprintf(fh->out, "H%s%06X%06X\n", sec_name, start_addr, sec_length);
 		Recoder recoder(start_addr, fh->out);
 		while (!(l->op("END") || (l->op("CSECT")) ||  fh->p2_eof())) {
@@ -236,6 +276,21 @@ struct CSection {
 				} else if (l->op("-")) {
 					LOCCTR += strlen(l->oper[0])/2;
 					recoder.insert(l->oper[0]);
+				} else if (l->op("USE")) {
+					unsigned i=0;
+					if (l->oper[0][0] == '\0') {
+						i = 0;
+					} else for (i=1; i<bl.size(); ++i) {
+						if (bl[i].name == l->oper[0]) {
+							break;
+						}
+					}
+					if (i!=bt) {
+						recoder.flush();
+						bl[bt].LOCCTR = LOCCTR;
+						recoder.tr.start_addr = LOCCTR = bl[i].LOCCTR;
+						bt = i;
+					}
 				}
 			} else if (f == 1) {
 				recoder.insert(l->mnem);
@@ -309,6 +364,7 @@ struct CSection {
 	{
 		while (lt < LITTAB.size()) {
 			LITTAB[lt].addr = LOCCTR;
+			LITTAB[lt].bn = bt;
 			LOCCTR += LITTAB[lt].bytes.length()/2;
 			fh->p1_write_byte(LITTAB[lt].bytes.c_str());
 			++lt;

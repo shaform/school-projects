@@ -6,21 +6,23 @@ struct Symbol {
 	string def;
 	bool absolute;
 	bool external;
+	unsigned bn;
 
 	bool is_absolute() { return absolute; }
 	bool is_external() { return external; }
 	bool is_recursive() { return def.size(); }
 
-	Symbol() : value(0), absolute(true), external(false) {}
-	Symbol(addr_t ad) : value(ad), absolute(false), external(false) {}
-	Symbol(addr_t ad, string d) : value(ad), def(d), absolute(false), external(false) {}
-	Symbol(addr_t ad, bool ab) : value(ad), absolute(ab), external(false) {}
-	Symbol(addr_t ad, bool ab, bool ext) : value(ad), absolute(ab), external(ext) {}
+	Symbol() : value(0), absolute(true), external(false), bn(0) {}
+	Symbol(addr_t ad, unsigned b) : value(ad), absolute(false), external(false), bn(b) {}
+	Symbol(addr_t ad, string d, unsigned b) : value(ad), def(d), absolute(false), external(false), bn(b) {}
+	Symbol(addr_t ad, bool ab, unsigned b) : value(ad), absolute(ab), external(false), bn(b) {}
+	Symbol(addr_t ad, bool ab, bool ext, unsigned b) : value(ad), absolute(ab), external(ext), bn(b) {}
 };
 struct Literal {
 	addr_t addr;
 	string bytes;
-	Literal(addr_t ad, string b) : addr(ad), bytes(b) {}
-	Literal() : addr(0) {}
+	unsigned bn;
+	Literal(addr_t ad, string b) : addr(ad), bytes(b), bn(0) {}
+	Literal() : addr(0), bn(0) {}
 };
 #endif
