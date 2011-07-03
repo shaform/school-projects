@@ -56,6 +56,7 @@ class Assembler {
 				css.push_back(CSection(&fh));
 			css.back().main_sect = true;
 
+			// Process each control section seperately.
 			while (css.back().pass1()) {
 				if (l->op("CSECT")) {
 					if (css[0].start_addr == 0u) {
@@ -75,6 +76,7 @@ class Assembler {
 		}
 		void pass2()
 		{
+			// Assuming the syntax is right for immediate file.
 			for (vector<CSection>::iterator it = css.begin(); it != css.end(); ++it) {
 				fh.p2_read_line();
 				it->pass2();
@@ -140,6 +142,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 // ------------------------------------------------------------------ //
+// Stores X'xx'.
 bool store_x(const char *from, char *to, int n)
 {
 	if (*from != 'X' || *++from != '\'') return false;
@@ -171,6 +174,7 @@ bool store_x(const char *from, char *to, int n)
 	return true;
 }
 
+// Stores C'xxx'.
 bool store_c(const char *from, char *to, int n)
 {
 	if (*from != 'C' || *++from != '\'') return false;

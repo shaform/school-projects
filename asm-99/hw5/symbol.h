@@ -6,6 +6,7 @@ struct Symbol {
 	string def;
 	bool absolute;
 	bool external;
+	// block number
 	unsigned bn;
 
 	bool is_absolute() { return absolute; }

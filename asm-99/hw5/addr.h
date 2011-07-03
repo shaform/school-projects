@@ -11,9 +11,11 @@ struct AddrRef {
 	AddrRef(string s, bool p) : symbol(s), positive(p) {}
 };
 
+// Address representation.
 struct Addr {
 	int addr;
 	int relative;
+	// External reference.
 	vector<AddrRef> ext;
 	bool error;
 	Addr() : addr(0), relative(0), error(false) {}

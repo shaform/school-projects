@@ -61,6 +61,7 @@ class FileHandler {
 		{
 			rewind(mid);
 		}
+		// hack for external reference.
 		void store_ext()
 		{
 			hack.clear();
@@ -255,6 +256,7 @@ class FileHandler {
 				if (buff_i[i] == '\n' || buff_i[i] == '\r')
 					buff_i[i] = '\0';
 
+			// Converts all lower letters to upper.
 			for (int i=0; buff_i[i]; ++i)
 				if (islower(buff_i[i]))
 					buff[i] = toupper(buff_i[i]);

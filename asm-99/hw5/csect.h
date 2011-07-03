@@ -8,6 +8,7 @@
 
 typedef map<string, Symbol>::iterator SYMIt;
 
+// Program block
 struct Block {
 	addr_t start_addr;
 	addr_t LOCCTR;
@@ -16,6 +17,7 @@ struct Block {
 	Block() : start_addr(0), LOCCTR(0), length(0) {}
 	Block(string s) : start_addr(0), LOCCTR(0), length(0), name(s) {}
 };
+// Control Section
 struct CSection {
 	FileHandler *fh;
 	char sec_name[MAXPG+1];
@@ -55,6 +57,7 @@ struct CSection {
 		sscanf(addr, "%d", &start_addr);
 		for (int i=0; i<MAXPG && name[i]; ++i)
 			sec_name[i] = name[i];
+		// Initialize LOCCTR to be always zero.
 		//LOCCTR = start_addr;
 	}
 
@@ -99,6 +102,7 @@ struct CSection {
 						if (LITTAB[i].bytes == l->oper[1])
 							break;
 					}
+					// Record the literal.
 					if (i==LITTAB.size())
 						LITTAB.push_back(Literal(0, l->oper[1]));
 					sprintf(&l->oper[0][1],
@@ -106,6 +110,7 @@ struct CSection {
 					l->oper[0][7] = '\0';
 				}
 			}
+			// Stores label.
 			if (l->has_label()) {
 				if (SYMTAB.find(l->label) != SYMTAB.end()) {
 					fh->print_line();
@@ -164,6 +169,7 @@ struct CSection {
 					}
 					fprintf(fh->mid, "0 EXTREF\n");
 				} else if (l->op("USE")) {
+					// Switchs block.
 					bl[bt].LOCCTR = LOCCTR;
 					if (l->oper[0][0] == '\0') {
 						bt = 0;
@@ -192,11 +198,16 @@ struct CSection {
 		fh->p1_write_line();
 		bl[bt].LOCCTR = LOCCTR;
 		sec_length = 0;
+
+
+		// Hack to accomplish program blocks.
+		// Calculates correct offsets.
 		for (unsigned i=0; i<bl.size(); ++i) {
 			bl[i].length = bl[i].LOCCTR;
 			bl[i].LOCCTR = bl[i].start_addr = start_addr + sec_length;
 			sec_length += bl[i].length;
 		}
+		// Calculates correct addresses.
 		for (SYMIt it=SYMTAB.begin(); it!=SYMTAB.end(); ++it) {
 			it->second.value += bl[it->second.bn].start_addr;
 		}
@@ -277,6 +288,7 @@ struct CSection {
 					LOCCTR += strlen(l->oper[0])/2;
 					recoder.insert(l->oper[0]);
 				} else if (l->op("USE")) {
+					// Program block.
 					unsigned i=0;
 					if (l->oper[0][0] == '\0') {
 						i = 0;
@@ -342,11 +354,13 @@ struct CSection {
 				fprintf(fh->out, "M%06X%02X\n", M[i].start_addr, M[i].sz);
 			else {
 				char sign = M[i].pos ? '+' : '-';
+				// Control section syntax, default section name.
 				const char *s = sec_name;
 				if (M[i].sym.size()) s = M[i].sym.c_str();
 				fprintf(fh->out, "M%06X%02X%c%s\n", M[i].start_addr, M[i].sz, sign, s);
 			}
 		}
+		// Switch between basic obj & control section obj.
 		if (main_sect) {
 			const char *s = end_str.c_str();
 			Addr ad = resolve(s, LOCCTR);
@@ -360,6 +374,7 @@ struct CSection {
 			fprintf(fh->out, "\n\n");
 		return true;
 	}
+	// Puts literals in here.
 	void p1_put_lt()
 	{
 		while (lt < LITTAB.size()) {
