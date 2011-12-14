@@ -24,6 +24,12 @@ code struct Question {
 		4,
 		0
 	},
+	{
+		"Pipelining can improve?\r\n"
+			"(A) Throughput  (B) CPI  (C) Data rate  (D) Hazards\r\n",
+		1,
+		0
+	},
 };
 
 void question_init(void)
