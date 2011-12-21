@@ -34,18 +34,19 @@ void timer_init(void)
 }
 void timer_restore(void)
 {
+	TR1 = 0;  // Pause timer
 	TMOD &= 0xCF;  // Clear timer1 mode
 	TMOD |= 0x10;  // Set timer1 to 16-bit timer
 	TH1 = th;
 	TL1 = tl;
-	TR1 = 1;  // Start timer1
 	ET1 = 1;  // Enable timer1 interrupt
 	EA = 1;  // Enable interrupt
+	TR1 = 1;  // Start timer1
 }
 void timer_stop(void)
 {
+	TR1 = 0;
+	ET1 = 0;
 	th = TH1;
 	tl = TL1;
-	ET1 = 0;
-	TR1 = 0;
 }
