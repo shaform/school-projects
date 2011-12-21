@@ -3,15 +3,15 @@
 
 /*
  * Display function uses Timer1,
- * Do not use timer1 for other purposes.
+ * it would stop the general timer and restore it afterawards.
  */
 
 void display_init(void);
 void display_string(const char *str);  // Send a string to the buffer
 void display_char(char ch);
-void display_routine(void);  // Call it in a loop for display functions to work
-bit display_busy(void);  // Check if display function is busy
 void display_flush(void);  // Flush all data
 void display_clear(void);
 
+void display_start(void);  // Call before display
+void display_stop(void);  // Call after display
 #endif

@@ -3,8 +3,12 @@
 #include "display.h"
 #include "questions.h"
 
-#define QN 3
+#define QN 6
 #define MAXN 100
+
+// http://www.tintinpiano.com/module/detail.php?id=81888
+// http://www.tintinpiano.com/module/detail.php?id=80068
+// http://www.gangqinpu.com/html/16375.htm
 
 uchar qnum;
 code struct Question {
@@ -30,6 +34,24 @@ code struct Question {
 		1,
 		0
 	},
+	{
+		"請問這是哪部作品的歌曲?\r\n"
+			"(A) 那些年，我們一起追的女孩  (B) 小資女孩向前衝  (C) 犀利人妻  (D) 我可能不會愛你\r\n",
+		3,
+		1
+	},
+	{
+		"請問這是哪部作品的歌曲?\r\n"
+			"(A) 那些年，我們一起追的女孩  (B) 小資女孩向前衝  (C) 犀利人妻  (D) 我可能不會愛你\r\n",
+		1,
+		2
+	},
+	{
+		"請問這是哪部作品的歌曲?\r\n"
+			"(A) 那些年，我們一起追的女孩  (B) 小資女孩向前衝  (C) 犀利人妻  (D) 我可能不會愛你\r\n",
+		2,
+		3
+	},
 };
 
 void question_init(void)
@@ -44,8 +66,10 @@ void question_display(void)
 {
 	display_clear();
 	display_string(questions[qnum].desc);
+	display_stop();
 }
 uchar question_get_answer(void)
 {
 	return questions[qnum].answer;
 }
+// vim: set fileencodings=utf-8:

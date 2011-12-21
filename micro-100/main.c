@@ -2,6 +2,7 @@
 #include "common.h"
 #include "display.h"
 #include "questions.h"
+#include "buzzer.h"
 
 #define INIT_SCORE 128
 #define LOSE_SCORE 118
@@ -18,77 +19,95 @@ sbit B3 = P0^6;
 sbit B4 = P0^7;
 /* P3.0 RX0, P3.1 TX0 */
 /* P3.2 RESTART */
-sbit RESTART = P3^3;
+sbit RESTART = P3^2;
 
-uchar wait_time;
-bit wait = 0;
+uchar wait_time, next_time;
+bit next_q = 0;  // Whether the next question is coming.
+bit wait = 0;  // Whether waiting for user to guess?
+bit stay = 0;  // Whether to stay and do nothing.
 bit first = 1;
 bit A_release, B_release;
+bit A_enable, B_enable;
 
 uchar A_scores = INIT_SCORE;
 uchar B_scores = INIT_SCORE;
 
-void timer0_init(void);
 uchar userA_answer();
 uchar userB_answer();
 void wait_answer();
 void init(void);
 void release_routine(void);
 
-void timer0Int(void) interrupt 1
+
+void timer1_int(void) interrupt 3
 {
+	//buzzer_step();
 	if (--wait_time == 0) {
-		wait = 0;              // next question
+		next_q = 1;  // next question
+	}
+	if (--next_time == 0) {
+		stay = 0;
 	}
 }
 
 void main()
 {
 	init();
+	display_clear();
+	display_string("Guess game!!\r\n"
+			"Are you ready?");
+	display_stop();
+
 	while (1) {   
-		if (first) {
+		if (stay) {
+			;  // do nothing
+		} else if (first) {
 			if (RESTART == 0) {
 				while (RESTART == 0);
 				first = 0;
+				next_q = 1;
 			}
-		} else if (wait == 0) {
-			wait = 1;
+		} else if (next_q) {
+			next_q = 0;
+			wait = 0;
+			stay = 1;
+			next_time = TIME_SEC*1;
+			display_clear();
+			display_string("Next question!!\r\n"
+					"Ready?");
+			display_stop();
+		} else if (wait) {
+			wait_answer();  
+		} else {
 			/* get a question */
 			question_next();
 			question_display();
 
-			/* reset timer0 */
-			wait_time = 20*3;
-		} else if(wait == 1) {
-			wait_answer();  
+			/* reset timer1 */
+			wait_time = TIME_SEC*5;
+			wait = 1;
+			A_enable = B_enable = 1;
 		}
-		display_routine();
 		release_routine();
 	}
 }
 
 void init(void)
 {
+	timer_init();
 	display_init();
 	question_init();
-	timer0_init();
+	stay = 0;
 	wait = 0;
+	next_q = 0;
+
 	first = 1;  // First time play
+
 	A_release = 1;
 	B_release = 1;
-}
 
-
-void timer0_init(void)
-{
-	wait_time = 20*10;
-	TMOD &= 0xFC;
-	TMOD |= 0x01;
-	TH0 = 0x3C;
-	TL0 = 0xB0;
-	ET0 = 1;  // Enable timer0 interrupt
-	EA = 1;  // Enable interrupt
-	TR0 = 1;  // Enable timer0
+	A_enable = 1;
+	B_enable = 1;
 }
 
 uchar userA_answer()
@@ -101,6 +120,8 @@ uchar userA_answer()
 		if (A4 == 0) { t = 4; }
 		A_release = 0;
 	}
+
+	if (!A_enable) t = 0;
 
 	return t;
 }
@@ -115,6 +136,8 @@ uchar userB_answer()
 		if (B4 == 0) { t = 4; }
 		B_release = 0;
 	}
+
+	if (!B_enable) t = 0;
 
 	return t;
 }
@@ -135,35 +158,38 @@ void wait_answer()
 	userA = userA_answer();
 	userB = userB_answer();
 	if (userA != 0){
+		A_enable = 0;
 		if (question_get_answer() == userA) {
+			B_enable = 0;
 			A_scores++;
 			if (A_scores == WIN_SCORE) {
 				/* Display LED and alarm */
 			}
 			//wait = 0;
 			display_string("A wins!!");
-			display_flush();
+			display_stop();
 		} else {  /* wrong */
 			A_scores = ((A_scores-1 <= LOSE_SCORE)?LOSE_SCORE:(A_scores-1));
 			display_string("A lose!!");
-			display_flush();
-		}   
-	} else {
+			display_stop();
+		}
 	}
 
 	if (userB != 0){
+		B_enable = 0;
 		if (question_get_answer() == userB) {
+			A_enable = 0;
 			B_scores++;
 			if (B_scores == WIN_SCORE){
 				/* Display LED and alarm */
 			}
 			display_string("B wins!!");
-			display_flush();
+			display_stop();
 			//wait = 0;
 		} else {   /* wrong */
 			B_scores = ((B_scores-1 <= LOSE_SCORE)?LOSE_SCORE:(B_scores-1));
 			display_string("B lose!!");
-			display_flush();
+			display_stop();
 		}
 	}
 }
