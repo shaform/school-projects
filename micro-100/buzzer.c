@@ -3,14 +3,32 @@
 #include "buzzer.h"
 
 sbit  buzzer=P3^2;
-uchar buzzer_time, tl, th;
-uchar *ptm, it;
+static uchar buzzer_time, tl, th;
+static uchar *ptm, it;
 
 code uchar test_note[] = {
 	5,1,1, 5,1,1, 6,1,2, 5,1,2, 1,2,2, 7,1,4,
 	5,1,1, 5,1,1, 6,1,2, 5,1,2, 2,2,2, 1,2,4,
 	5,1,1, 5,1,1, 5,2,2, 3,2,2, 1,2,2, 7,1,2, 6,1,2,
 	4,2,1, 4,2,1, 3,2,2, 1,2,2, 2,2,2, 1,2,4, 0,0,0
+};
+code uchar test_note2[] = {
+	2,2,2, 7,1,2, 2,2,2, 7,1,2, 9,2,3, 5,1,1,
+	6,1,1, 7,1,1, 6,1,2, 9,2,3, 2,2,2, 1,2,4,
+	5,1,1, 5,1,1, 5,2,2, 3,2,2, 1,2,2, 7,1,2, 6,1,2,
+	4,2,1, 4,2,1, 3,2,2, 1,2,2, 2,2,2, 1,2,4, 0,0,0
+};
+code uchar year[] = {
+	5,1,1, 5,1,1, 7,1,2, 1,2,2, 1,2,2, 1,2,2,
+	5,1,2, 5,1,3, 6,1,2, 9,2,3, 2,2,2, 1,2,4,
+	5,1,1, 5,1,1, 5,2,2, 3,2,2, 1,2,2, 7,1,2, 6,1,2,
+	4,2,1, 4,2,1, 3,2,2, 1,2,2, 2,2,2, 1,2,4, 0,0,0
+};
+
+code uchar five[] = {
+	6,2,1, 7,2,1, 8,2,4, 8,2,2, 3,2,2, 6,2,6, 6,2,1,
+	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
+	2,2,6, 0,0,0,
 };
 
 code uchar *music[] = {
@@ -65,16 +83,27 @@ void set_freq(uchar i, uchar j)
 	TL0 = tl = FREQL[f];
 }
 
+void buzzer_play_num(uchar n)
+{
+	buzzer_play(five);
+}
 void buzzer_play(uchar *notes)
 {
 	it = 0;
 	ptm = notes;
 	buzzer_time = 1;
 }
-void buzzer_step(void)
+bit buzzer_step(void)
 {
-	if (ptm && ptm[it]) {
+	bit pause = 0;
+	if (ptm) {
 		if (--buzzer_time == 0) {
+			if (!ptm[it]) {
+				ptm = 0;
+				buzzer_stop();
+				return 0;
+			}
+			pause = 1;
 			buzzer_time = ptm[it+2];
 			if (ptm[it] == 9)
 				buzzer_stop();
@@ -87,6 +116,7 @@ void buzzer_step(void)
 	} else {
 		buzzer_stop();
 	}
+	return pause;
 }
 
 void timer0_int(void) interrupt 1

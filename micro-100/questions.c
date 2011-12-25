@@ -72,4 +72,8 @@ uchar question_get_answer(void)
 {
 	return questions[qnum].answer;
 }
+uchar question_get_music(void)
+{
+	return questions[qnum].music_id;
+}
 // vim: set fileencodings=utf-8:

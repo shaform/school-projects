@@ -19,9 +19,12 @@ sbit B3 = P0^6;
 sbit B4 = P0^7;
 /* P3.0 RX0, P3.1 TX0 */
 /* P3.2 RESTART */
-sbit RESTART = P3^2;
+sbit RESTART = P3^3;
 
-uchar wait_time, next_time;
+static uchar wait_time, next_time, buzzer_time;
+uchar temp_m;
+bit buzzer_next = 0;
+bit buzzer_pause = 0;
 bit next_q = 0;  // Whether the next question is coming.
 bit wait = 0;  // Whether waiting for user to guess?
 bit stay = 0;  // Whether to stay and do nothing.
@@ -37,6 +40,7 @@ uchar userB_answer();
 void wait_answer();
 void init(void);
 void release_routine(void);
+void buzzer_routine(void);
 
 
 void timer1_int(void) interrupt 3
@@ -48,6 +52,9 @@ void timer1_int(void) interrupt 3
 	if (--next_time == 0) {
 		stay = 0;
 	}
+	if (--buzzer_time == 0) {
+		buzzer_next = 1;
+	}
 }
 
 void main()
@@ -58,6 +65,7 @@ void main()
 			"Are you ready?");
 	display_stop();
 
+	buzzer_play_num(1);
 	while (1) {   
 		if (stay) {
 			;  // do nothing
@@ -68,6 +76,7 @@ void main()
 				next_q = 1;
 			}
 		} else if (next_q) {
+			buzzer_play(0);
 			next_q = 0;
 			wait = 0;
 			stay = 1;
@@ -82,13 +91,18 @@ void main()
 			/* get a question */
 			question_next();
 			question_display();
+			temp_m = question_get_music();
+			if (temp_m) {
+				buzzer_play_num(temp_m);
+			}
 
 			/* reset timer1 */
-			wait_time = TIME_SEC*5;
+			wait_time = TIME_SEC*2;
 			wait = 1;
 			A_enable = B_enable = 1;
 		}
 		release_routine();
+		buzzer_routine();
 	}
 }
 
@@ -97,9 +111,13 @@ void init(void)
 	timer_init();
 	display_init();
 	question_init();
+	buzzer_init();
 	stay = 0;
 	wait = 0;
 	next_q = 0;
+	buzzer_next = 0;
+	buzzer_time = TIME_SEC/8;
+	buzzer_pause = 0;
 
 	first = 1;  // First time play
 
@@ -152,6 +170,24 @@ void release_routine(void)
 		B_release = 1;
 }
 
+
+void buzzer_routine(void)
+{
+	if (buzzer_next) {
+		if (buzzer_pause) {
+			buzzer_pause = 0;
+			TR0 = 1;
+			buzzer_time = TIME_SEC/8;
+		} else if (buzzer_step()) {
+			TR0 = 0;
+			buzzer_pause = 1;
+			buzzer_time = 1;
+		} else {
+			buzzer_time = TIME_SEC/8;
+		}
+		buzzer_next = 0;
+	}
+}
 void wait_answer()
 {
 	uchar userA, userB;
