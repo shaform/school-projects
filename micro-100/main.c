@@ -17,18 +17,76 @@ sbit B1 = P0^4;
 sbit B2 = P0^5;
 sbit B3 = P0^6;
 sbit B4 = P0^7;
+
+sbit Afront = P1^0;
+sbit Bfront = P1^1;
+sbit Aback = P1^2;
+sbit Bback = P1^3;
+
+/* car control */
+sbit carA_1 = P1^4;
+sbit carA_2 = P1^5;
+sbit carB_1 = P1^6;
+sbit carB_2 = P1^7;
+uchar carA_t = 0, carB_t = 0, car_num;
+
+
+void carAstop()
+{
+	carA_1 = 1;
+	carA_2 = 1;
+}
+void carBstop()
+{
+	carB_1 = 1;
+	carB_2 = 1;
+}
+void carAgo()
+{
+	carA_1 = 1;
+	carA_2 = 0;
+	carA_t = 2;
+}
+void carBgo()
+{
+	carA_1 = 1;
+	carA_2 = 0;
+	carA_t = 2;
+}
+void carAback()
+{
+	carA_1 = 0;
+	carA_2 = 1;
+	carB_t = 2;
+}
+void carBback()
+{
+	carA_1 = 0;
+	carA_2 = 1;
+	carB_t = 2;
+}
+
 /* P3.0 RX0, P3.1 TX0 */
-/* P3.2 RESTART */
+/* P3.2 BUZZER */
+/* P3.3 RESTART */
 sbit RESTART = P3^3;
+
 
 static uchar wait_time, next_time, buzzer_time;
 uchar temp_m;
 bit buzzer_next = 0;
 bit buzzer_pause = 0;
-bit next_q = 0;  // Whether the next question is coming.
-bit wait = 0;  // Whether waiting for user to guess?
+
+// Control signal
+
 bit stay = 0;  // Whether to stay and do nothing.
+bit car_adj = 0;  // Whether to adjust car.
+bit next_q = 0;  // Next question stay.
+bit disp_q = 0;  // Display question.
+bit car_ah = 0;  // Car go front.
+bit wait_a = 0;   // Wait for input
 bit first = 1;
+
 bit A_release, B_release;
 bit A_enable, B_enable;
 
@@ -47,7 +105,7 @@ void timer1_int(void) interrupt 3
 {
 	//buzzer_step();
 	if (--wait_time == 0) {
-		next_q = 1;  // next question
+		wait_a = 0;  // next question
 	}
 	if (--next_time == 0) {
 		stay = 0;
@@ -55,6 +113,19 @@ void timer1_int(void) interrupt 3
 	if (--buzzer_time == 0) {
 		buzzer_next = 1;
 	}
+	if (carA_t) {
+		if (--carA_t == 1)
+			carAstop();
+	}
+	if (carB_t) {
+		if (--carB_t == 1)
+			carBstop();
+	}
+}
+void stay_for(uchar t)
+{
+	stay = 1;
+	next_time = TIME_SEC*1;
 }
 
 void main()
@@ -65,29 +136,36 @@ void main()
 			"Are you ready?");
 	display_stop();
 
-	buzzer_play_num(1);
 	while (1) {   
-		if (stay) {
+		if (stay || carA_t || carB_t) {
 			;  // do nothing
+		} else if (car_adj) {
+			if (!Aback) carAback();
+			if (!Bback) carBback();
+			if (Aback && Bback)
+				car_adj = 0;
 		} else if (first) {
-			if (RESTART == 0) {
-				while (RESTART == 0);
-				first = 0;
-				next_q = 1;
+			if (Aback && Bback) {
+				if (RESTART == 0) {
+					while (RESTART == 0);
+					first = 0;
+					next_q = 1;
+				}
+			} else {
+				car_adj = 1;
 			}
 		} else if (next_q) {
-			buzzer_play(0);
+			buzzer_play(0);  // Stop music
 			next_q = 0;
-			wait = 0;
-			stay = 1;
-			next_time = TIME_SEC*1;
+			disp_q = 1;
 			display_clear();
 			display_string("Next question!!\r\n"
 					"Ready?");
 			display_stop();
-		} else if (wait) {
-			wait_answer();  
-		} else {
+			stay_for(TIME_SEC*1);
+		} else if (disp_q) {
+			disp_q = 0;
+			wait_a = 1;
 			/* get a question */
 			question_next();
 			question_display();
@@ -98,8 +176,28 @@ void main()
 
 			/* reset timer1 */
 			wait_time = TIME_SEC*2;
-			wait = 1;
 			A_enable = B_enable = 1;
+		} else if (wait_a) {
+			wait_answer();  
+		} else if (car_ah) {
+			car_ah = 0;
+			display_clear();
+			if (car_num == 0)
+				display_string("Player1 is right!\r\n");
+			else if (car_num == 1)
+				display_string("Player1 is wrong!\r\n");
+			else if (car_num == 2)
+				display_string("Player2 is right!\r\n");
+			else
+				display_string("Player2 is wrong!\r\n");
+			display_stop();
+
+			if (car_num == 0 || car_num == 3)
+				carAgo();
+			else
+				carBgo();
+		} else {
+			next_q = 1;
 		}
 		release_routine();
 		buzzer_routine();
@@ -108,18 +206,27 @@ void main()
 
 void init(void)
 {
+	carAstop();
+	carBstop();
+
 	timer_init();
 	display_init();
 	question_init();
 	buzzer_init();
+
+	first = 1;  // First time play
 	stay = 0;
-	wait = 0;
 	next_q = 0;
+	car_adj = 0;
+	wait_a = 0;
+	disp_q = 0;
+	car_ah = 0;
+
+
 	buzzer_next = 0;
 	buzzer_time = TIME_SEC/8;
 	buzzer_pause = 0;
 
-	first = 1;  // First time play
 
 	A_release = 1;
 	B_release = 1;
@@ -193,40 +300,29 @@ void wait_answer()
 	uchar userA, userB;
 	userA = userA_answer();
 	userB = userB_answer();
-	if (userA != 0){
+	if (userA || userB) {
 		A_enable = 0;
+		B_enable = 0;
+		car_ah = 1;
+		wait_a = 0;
+	}
+	if (userA != 0){
 		if (question_get_answer() == userA) {
-			B_enable = 0;
 			A_scores++;
-			if (A_scores == WIN_SCORE) {
-				/* Display LED and alarm */
-			}
-			//wait = 0;
-			display_string("A wins!!");
-			display_stop();
+			car_num = 0;
 		} else {  /* wrong */
-			A_scores = ((A_scores-1 <= LOSE_SCORE)?LOSE_SCORE:(A_scores-1));
-			display_string("A lose!!");
-			display_stop();
+			B_scores++;
+			car_num = 1;
 		}
 	}
 
 	if (userB != 0){
-		B_enable = 0;
 		if (question_get_answer() == userB) {
-			A_enable = 0;
 			B_scores++;
-			if (B_scores == WIN_SCORE){
-				/* Display LED and alarm */
-			}
-			display_string("B wins!!");
-			display_stop();
-			//wait = 0;
+			car_num = 2;
 		} else {   /* wrong */
-			B_scores = ((B_scores-1 <= LOSE_SCORE)?LOSE_SCORE:(B_scores-1));
-			display_string("B lose!!");
-			display_stop();
+			A_scores++;
+			car_num = 3;
 		}
 	}
 }
-
