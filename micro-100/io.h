@@ -1,5 +1,7 @@
 #ifndef IO_H
 #define IO_H
+#include <reg52.h>
+#include "common.h"
 
 uchar get_input_A(void);
 uchar get_input_B(void);

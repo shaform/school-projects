@@ -1,7 +1,6 @@
 #include "io.h"
 
 bit A_release, B_release;
-bit A_enable, B_enable;
 
 
 uchar get_input_A(void)
@@ -15,7 +14,7 @@ uchar get_input_A(void)
 		A_release = 0;
 	}
 
-	if (!A_enable) t = 0;
+	//if (!A_enable) t = 0;
 
 	return t;
 }
@@ -31,7 +30,7 @@ uchar get_input_B(void)
 		B_release = 0;
 	}
 
-	if (!B_enable) t = 0;
+	//if (!B_enable) t = 0;
 
 	return t;
 }

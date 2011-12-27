@@ -13,6 +13,7 @@ static code uchar five[] = {
 };
 
 static code uchar *music[] = {
+	0,
 	&five,
 	&five,
 	&five,
@@ -58,7 +59,7 @@ static void buzzer_play(uchar *notes)
 
 void buzzer_play_num(uchar n)
 {
-	buzzer_play(n);
+	buzzer_play(music[n]);
 }
 bit buzzer_step(void)
 {
