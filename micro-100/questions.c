@@ -68,7 +68,7 @@ code struct Question {
 	},
 	{
 		"2012年(第十三任)總統大選，國民黨、民進黨、親民黨的總統候選人分別是:\r\n"
-			"(A) 吳敦義、蔡英文、宋楚瑜  (B) 馬英九、蔡英文、林瑞雄\r\n",
+			"(A) 吳敦義、蔡英文、宋楚瑜  (B) 馬英九、蔡英文、林瑞雄\r\n"
 			"(B) 吳敦義、蘇嘉全、林瑞雄  (D) 馬英九、蔡英文、宋楚瑜\r\n",
 		4,
 		0
@@ -87,8 +87,8 @@ code struct Question {
 	},
 	{
 		"下列哪一個問題是decidable?\r\n"
-			"(A) Halting problem (B) post correspondence problem\r\n",
-			"(C) a turing machine determines whehter two turing marchines are equal\r\n",
+			"(A) Halting problem (B) post correspondence problem\r\n"
+			"(C) a turing machine determines whehter two turing marchines are equal\r\n"
 			"(D) clique problem\r\n",
 		4,
 		0
