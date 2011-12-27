@@ -3,7 +3,7 @@
 #include "display.h"
 #include "questions.h"
 
-#define QN 16
+#define QN 20
 
 uchar qnum;
 code struct Question {
@@ -83,7 +83,7 @@ code struct Question {
 		"請問這是哪部作品的歌曲?\r\n"
 			"(A) 那些年，我們一起追的女孩  (B) 小資女孩向前衝  (C) 犀利人妻  (D) 我可能不會愛你\r\n",
 		1,
-		2
+		3
 	},
 	{
 		"下列哪一個問題是decidable?\r\n"
@@ -94,9 +94,21 @@ code struct Question {
 		0
 	},
 	{
+		"這搶答遊戲是哪一組做的 =w=?\r\n"
+			"(A) 1 (B) 2 (C) 11 (C) 12\r\n",
+		3,
+		0
+	},
+	{
 		"在WOW的故事中，哪一位是被遺忘者的領導人\r\n"
 			"(A) Sylvanas (B) Thrall (C) Malfurion (D) Arthas\r\n",
 		1,
+		0
+	},
+	{
+		"交大資工大學部學生通識學分總共有多少?\r\n"
+			"(A) 15  (B) 18  (C) 20  (D) 22\r\n",
+		3,
 		0
 	},
 	{
@@ -110,6 +122,18 @@ code struct Question {
 			"(A) 蘿球社 (B) 要聽爸爸的話 (C) 魔法少女小圓 (D) 我的朋友很少\r\n",
 		2,
 		0
+	},
+	{
+		"請問誰哪種遊戲在這次期末專題被兩組選定，且發想原因也相同?\r\n"
+			"(A) 格鬥遊戲 (B) 武藤遊戲 (C) 太鼓達人 (D) 打地鼠\r\n",
+		4,
+		0
+	},
+	{
+		"請問這是哪部作品的歌曲?\r\n"
+			"(A) 那些年，我們一起追的女孩  (B) 小資女孩向前衝  (C) 犀利人妻  (D) 我可能不會愛你\r\n",
+		2,
+		4
 	},
 };
 
