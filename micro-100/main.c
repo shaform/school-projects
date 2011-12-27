@@ -18,10 +18,14 @@
 #define WAIT_A 6
 #define ADV_CAR 7
 #define WAIT_CAR 8
+
+#define CLICK_START 9
+#define CLICK_GO 10
+#define CLICK_RUN 11
+
 #define AWIN 17
 #define BWIN 18
 #define FINAL 19
-
 
 #define ARIGHT 0
 #define AWRONG 1
@@ -34,7 +38,7 @@ static uchar carA_t = 0, carB_t = 0;
 static uchar guess_result;
 static bit stay, wait_a;
 static uchar wait_time, stay_time, buzzer_time;
-static uchar temp_m;
+static uchar temp_m, temp_a, temp_b;
 static bit buzzer_next = 0;
 static bit buzzer_pause = 0;
 
@@ -102,11 +106,13 @@ static void game_routine(void)
 			state = GAME_CHOOSE;
 			break;
 		case GAME_CHOOSE:
-			if (get_input_A() == BTNA || get_input_B() == BTNA)
+			temp_a = get_input_A();
+			temp_b = get_input_B();
+
+			if (temp_a == BTNA || temp_b == BTNA)
 				state = NEXT_Q;
-			if (get_input_A() == BTNB || get_input_B() == BTNB)
-				//state = CLICK_START;
-				;
+			if (temp_a == BTNB || temp_b == BTNB)
+				state = CLICK_START;
 			break;
 		case NEXT_Q:
 			buzzer_play_num(0);  // Stop music
@@ -171,6 +177,30 @@ static void game_routine(void)
 					state = BWIN;
 				stay_for(TIME_SEC*1);
 			}
+			break;
+		case CLICK_START:
+			display_clear();
+			display_string("Click Click Click!\r\n"
+					"Ready?\r\n");
+			display_stop();
+			state = CLICK_GO;
+			stay_for(TIME_SEC*3);
+			break;
+		case CLICK_GO:
+			display_clear();
+			display_string("GO!\r\n");
+			display_stop();
+			state = CLICK_RUN;
+			break;
+		case CLICK_RUN:
+			if (ct_car_is_A_free() && get_input_A())
+				ct_car_adv_A();
+			if (ct_car_is_B_free() && get_input_B())
+				ct_car_adv_B();
+			if (car_is_A_front())
+				state = AWIN;
+			if (car_is_B_front())
+				state = BWIN;
 			break;
 		case AWIN:
 			display_clear();
