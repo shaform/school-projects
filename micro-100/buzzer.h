@@ -5,13 +5,7 @@ void buzzer_play_num(uchar n);
 void buzzer_init(void);
 bit buzzer_step(void);
 
-inline void buzzer_stop(void)
-{
-	TR0 = 0;
-}
-inline void buzzer_start(void)
-{
-	TR0 = 1;
-}
+#define buzzer_stop() {TR0 = 0;}
+#define buzzer_start() {TR0 = 1;}
 
 #endif
