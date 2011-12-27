@@ -4,10 +4,6 @@
 #include "questions.h"
 #include "buzzer.h"
 
-#define INIT_SCORE 128
-#define LOSE_SCORE 118
-#define WIN_SCORE  138
-
 /* A1-A4:P0.0-P0.3, B1-B4:P0.4-P0.7 */
 sbit A1 = P0^0;
 sbit A2 = P0^1;
@@ -90,8 +86,6 @@ bit first = 1;
 bit A_release, B_release;
 bit A_enable, B_enable;
 
-uchar A_scores = INIT_SCORE;
-uchar B_scores = INIT_SCORE;
 
 uchar userA_answer();
 uchar userB_answer();
@@ -308,20 +302,16 @@ void wait_answer()
 	}
 	if (userA != 0){
 		if (question_get_answer() == userA) {
-			A_scores++;
 			car_num = 0;
 		} else {  /* wrong */
-			B_scores++;
 			car_num = 1;
 		}
 	}
 
 	if (userB != 0){
 		if (question_get_answer() == userB) {
-			B_scores++;
 			car_num = 2;
 		} else {   /* wrong */
-			A_scores++;
 			car_num = 3;
 		}
 	}

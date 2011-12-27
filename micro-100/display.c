@@ -2,12 +2,27 @@
 #include "common.h"
 #include "display.h"
 
-void display_routine(void);
+static bit send_next, buffer_empty, serial_enable;
+static const char *ptr;
+static char buf[2];
 
-bit send_next, buffer_empty, serial_enable;
-const char *ptr;
-char buf[2];
-void serial_int(void) interrupt 4
+// ---------------------------------------------------- //
+static void display_routine(void)
+{
+	if (send_next) {
+		send_next = 0;
+		if (ptr == 0 || *ptr == '\0') {
+			buffer_empty = 1;
+		} else {
+			SBUF = *ptr++;
+		}
+	}
+}
+static bit display_busy(void)
+{
+	return !buffer_empty;
+}
+static void serial_int(void) interrupt 4
 {
 	if (TI == 1) {
 		TI = 0;
@@ -16,6 +31,8 @@ void serial_int(void) interrupt 4
 		RI = 0;
 	}
 }
+// ---------------------------------------------------- //
+
 void display_start(void)
 {
 	if (!serial_enable) {
@@ -55,30 +72,6 @@ void display_string(const char *str)
 	buffer_empty = 0;
 	send_next = 1;
 	ptr = str;
-}
-void display_char(char ch)
-{
-	display_flush();
-	buffer_empty = 0;
-	send_next = 1;
-	buf[0] = ch;
-	ptr = buf;
-}
-void display_routine(void)
-{
-	if (send_next) {
-		send_next = 0;
-		if (ptr == 0 || *ptr == '\0') {
-			buffer_empty = 1;
-		} else {
-			SBUF = *ptr++;
-		}
-		//delay_serial();
-	}
-}
-bit display_busy(void)
-{
-	return !buffer_empty;
 }
 void display_clear(void)
 {

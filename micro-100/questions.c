@@ -6,10 +6,6 @@
 #define QN 6
 #define MAXN 100
 
-// http://www.tintinpiano.com/module/detail.php?id=81888
-// http://www.tintinpiano.com/module/detail.php?id=80068
-// http://www.gangqinpu.com/html/16375.htm
-
 uchar qnum;
 code struct Question {
 	const char *desc;

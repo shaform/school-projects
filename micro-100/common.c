@@ -20,12 +20,6 @@ void delay_us(int us)
 	while (us--);
 }
 
-
-void delay_serial(void)
-{
-	uint t = 5000;
-	while (t--);
-}
 void timer_init(void)
 {
 	tl = 0xB0;

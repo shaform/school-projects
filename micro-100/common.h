@@ -7,8 +7,6 @@
 void delay(int ms);
 void delay_us(int us);
 
-
-
 void timer_init(void);
 void timer_stop(void);
 void timer_restore(void);

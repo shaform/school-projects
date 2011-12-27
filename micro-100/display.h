@@ -8,7 +8,6 @@
 
 void display_init(void);
 void display_string(const char *str);  // Send a string to the buffer
-void display_char(char ch);
 void display_flush(void);  // Flush all data
 void display_clear(void);
 
