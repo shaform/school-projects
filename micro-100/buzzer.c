@@ -6,7 +6,22 @@ sbit  buzzer=P3^2;
 static uchar buzzer_time, tl, th;
 static uchar *ptm, it;
 
+static code uchar year[] = {
+	6,2,1, 7,2,1, 8,2,4, 8,2,2, 3,2,2, 6,2,6, 6,2,1,
+	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
+	2,2,6, 0,0,0,
+};
+static code uchar nono[] = {
+	6,2,1, 7,2,1, 8,2,4, 8,2,2, 3,2,2, 6,2,6, 6,2,1,
+	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
+	2,2,6, 0,0,0,
+};
 static code uchar five[] = {
+	6,2,1, 7,2,1, 8,2,4, 8,2,2, 3,2,2, 6,2,6, 6,2,1,
+	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
+	2,2,6, 0,0,0,
+};
+static code uchar love[] = {
 	6,2,1, 7,2,1, 8,2,4, 8,2,2, 3,2,2, 6,2,6, 6,2,1,
 	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
 	2,2,6, 0,0,0,
@@ -14,10 +29,10 @@ static code uchar five[] = {
 
 static code uchar *music[] = {
 	0,
+	&year,
+	&nono,
 	&five,
-	&five,
-	&five,
-	&five,
+	&love,
 };
 // Freq table, get from internet
 // 0 = END, 9 = SILIENCE
