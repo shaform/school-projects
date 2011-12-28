@@ -32,6 +32,8 @@
 #define BRIGHT 2
 #define BWRONG 3
 
+static const char *ANSWERS[4] = {"A", "B", "C", "D"};
+
 // ---------------------------------------------------- //
 
 static uchar carA_t = 0, carB_t = 0;
@@ -159,6 +161,11 @@ static void game_routine(void)
 					display_string("Player2 is wrong!\r\n");
 					break;
 			}
+			if (guess_result == ARIGHT || guess_result == BRIGHT) {
+				display_string("The answer is ");
+				display_string(ANSWERS[question_get_answer()-1]);
+				display_string("\n\n");
+			}
 			display_stop();
 
 			if (guess_result == ARIGHT || guess_result == BWRONG)
@@ -175,7 +182,7 @@ static void game_routine(void)
 					state = AWIN;
 				if (car_is_B_front())
 					state = BWIN;
-				stay_for(TIME_SEC*1);
+				stay_for(TIME_SEC*2);
 			}
 			break;
 		case CLICK_START:
