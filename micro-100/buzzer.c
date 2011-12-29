@@ -3,31 +3,38 @@
 #include "buzzer.h"
 
 sbit  buzzer=P3^2;
-static uchar buzzer_time, tl, th;
-static uchar *ptm, it;
+uchar b_buzzer_time, tl, th;
+uchar *ptm, it;
 
-static code uchar year[] = {
+code uchar year[] = {
+	4,2,1, 4,2,1, 5,2,1, 6,2,2, 6,2,2, 6,2,2, 7,2,1, 6,2,6,
+	6,2,1, 5,2,1, 4,2,1, 5,2,2, 5,2,2, 5,2,2,
+	7,2,2, 6,2,6, 5,2,2, 4,2,2, 3,2,1,
+	4,2,4, 3,2,1, 4,2,2, 3,2,2, 2,2,2,
+	1,2,2, 1,2,13,4,2,1, 5,2,1, 6,2,1,
+	7,2,4, 2,2,2, 4,2,2, 3,2,8, 1,2,1,
+	6,2,2, 7,2,2, 6,2,2, 5,2,2, 4,2,2,
+	4,2,2, 3,2,2, 4,2,2, 7,2,2, 6,2,2,
+	5,2,2, 4,2,1, 7,2,3, 6,2,2, 5,2,2,
+	4,2,1, 5,2,17,0,0,0,
+};
+code uchar nono[] = {
+	2,3,1, 7,2,1, 2,3,1, 7,2,4, 9,2,1, 5,2,1, 6,2,1,
+	7,2,1, 6,2,4, 9,2,1, 5,2,1, 6,2,1, 7,2,1,
+	5,2,4, 9,2,1, 2,2,1, 3,2,1, 5,2,1, 4,2,4, 0,0,0,
+};
+code uchar five[] = {
 	6,2,1, 7,2,1, 8,2,4, 8,2,2, 3,2,2, 6,2,6, 6,2,1,
 	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
 	2,2,6, 0,0,0,
 };
-static code uchar nono[] = {
-	6,2,1, 7,2,1, 8,2,4, 8,2,2, 3,2,2, 6,2,6, 6,2,1,
-	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
-	2,2,6, 0,0,0,
-};
-static code uchar five[] = {
-	6,2,1, 7,2,1, 8,2,4, 8,2,2, 3,2,2, 6,2,6, 6,2,1,
-	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
-	2,2,6, 0,0,0,
-};
-static code uchar love[] = {
+code uchar love[] = {
 	6,2,1, 7,2,1, 8,2,4, 8,2,2, 3,2,2, 6,2,6, 6,2,1,
 	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
 	2,2,6, 0,0,0,
 };
 
-static code uchar *music[] = {
+code uchar *music[] = {
 	0,
 	&year,
 	&nono,
@@ -36,20 +43,20 @@ static code uchar *music[] = {
 };
 // Freq table, get from internet
 // 0 = END, 9 = SILIENCE
-static code uchar FREQH[] = {
+code uchar FREQH[] = {
 	0xF2,0xF3,0xF5,0xF5,0xF6,0xF7,0xF8, 
 	0xF9,0xF9,0xFA,0xFA,0xFB,0xFB,0xFC,0xFC, //1,2,3,4,5,6,7,i
 	0xFC,0xFD,0xFD,0xFD,0xFD,0xFE,
 	0xFE,0xFE,0xFE,0xFE,0xFE,0xFE,0xFF,
 };
-static code uchar FREQL[] = {
+code uchar FREQL[] = {
 	0x42,0xC1,0x17,0xB6,0xD0,0xD1,0xB6,
 	0x21,0xE1,0x8C,0xD8,0x68,0xE9,0x5B,0x8F, //1,2,3,4,5,6,7,i
 	0xEE,0x44, 0x6B,0xB4,0xF4,0x2D, 
 	0x47,0x77,0xA2,0xB6,0xDA,0xFA,0x16,
 };
 // ---------------------------------------------------- //
-static void timer0_int(void) interrupt 1
+void timer0_int(void) interrupt 1
 {
 	TR0 = 0;
 	buzzer = !buzzer;
@@ -57,18 +64,18 @@ static void timer0_int(void) interrupt 1
 	TL0 = tl;
 	TR0 = 1;
 }
-static void set_freq(uchar i, uchar j)
+void set_freq(uchar i, uchar j)
 {
 	uchar f;
 	f = i+j*7-1;
 	TH0 = th = FREQH[f];
 	TL0 = tl = FREQL[f];
 }
-static void buzzer_play(uchar *notes)
+void buzzer_play(uchar *notes)
 {
 	it = 0;
 	ptm = notes;
-	buzzer_time = 1;
+	b_buzzer_time = 1;
 }
 // ---------------------------------------------------- //
 
@@ -80,14 +87,14 @@ bit buzzer_step(void)
 {
 	bit pause = 0;
 	if (ptm) {
-		if (--buzzer_time == 0) {
+		if (--b_buzzer_time == 0) {
 			if (!ptm[it]) {
 				ptm = 0;
 				buzzer_stop();
 				return 0;
 			}
 			pause = 1;
-			buzzer_time = ptm[it+2];
+			b_buzzer_time = ptm[it+2];
 			if (ptm[it] == 9)
 				buzzer_stop();
 			else {

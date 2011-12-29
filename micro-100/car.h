@@ -1,14 +1,14 @@
 #ifndef CAR_H
 #define CAR_H
-sbit carAfront = P1^0;
-sbit carBfront = P1^1;
-sbit carAback = P1^2;
-sbit carBback = P1^3;
+sbit carAfront = P2^6;
+sbit carBfront = P2^7;
+sbit carAback = P2^4;
+sbit carBback = P2^5;
 
-sbit carA_1 = P1^4;
-sbit carA_2 = P1^5;
-sbit carB_1 = P1^6;
-sbit carB_2 = P1^7;
+sbit carA_1 = P3^4;
+sbit carA_2 = P3^5;
+sbit carB_1 = P3^6;
+sbit carB_2 = P3^7;
 
 #define car_stop_A() {carA_1 = 1; carA_2 = 1;}
 #define car_stop_B() {carB_1 = 1; carB_2 = 1;}

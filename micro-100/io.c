@@ -1,5 +1,13 @@
 #include "io.h"
 
+sbit A1 = P1^0;
+sbit A2 = P1^1;
+sbit A3 = P1^2;
+sbit A4 = P1^3;
+sbit B1 = P1^4;
+sbit B2 = P1^5;
+sbit B3 = P1^6;
+sbit B4 = P1^7;
 bit A_release, B_release;
 
 

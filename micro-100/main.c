@@ -32,17 +32,18 @@
 #define BRIGHT 2
 #define BWRONG 3
 
-static const char *ANSWERS[4] = {"A", "B", "C", "D"};
+const char *ANSWERS[4] = {"A", "B", "C", "D"};
 
 // ---------------------------------------------------- //
 
-static uchar carA_t = 0, carB_t = 0;
-static uchar guess_result;
-static bit stay, wait_a;
-static uchar wait_time, stay_time, buzzer_time;
-static uchar temp_m, temp_a, temp_b;
-static bit buzzer_next = 0;
-static bit buzzer_pause = 0;
+uchar carA_t = 0, carB_t = 0;
+bit carA_di, carB_di;
+uchar guess_result;
+bit stay, wait_a;
+uchar wait_time, stay_time, buzzer_time;
+uchar temp_m, temp_a, temp_b;
+bit buzzer_next = 0;
+bit buzzer_pause = 0;
 
 uchar state, next_state;
 
@@ -69,12 +70,13 @@ void ct_car_adv_B(void);
 void main()
 {
 	init();
+//	buzzer_play_num(1);
 	while (1) game_routine();
 }
 
 // ---------------------------------------------------- //
 
-static void game_routine(void)
+void game_routine(void)
 {
 	if (stay) return;
 
@@ -182,7 +184,7 @@ static void game_routine(void)
 					state = AWIN;
 				if (car_is_B_front())
 					state = BWIN;
-				stay_for(TIME_SEC*2);
+				stay_for(TIME_SEC*1);
 			}
 			break;
 		case CLICK_START:
@@ -258,7 +260,7 @@ void init(void)
 
 // ---------------------------------------------------- //
 
-static void wait_answer()
+void wait_answer()
 {
 	uchar userA, userB;
 
@@ -286,36 +288,40 @@ static void wait_answer()
 
 // ---------------------------------------------------- //
 
-static bit ct_car_is_A_free(void)
+bit ct_car_is_A_free(void)
 {
 	return carA_t == 0;
 }
-static bit ct_car_is_B_free(void)
+bit ct_car_is_B_free(void)
 {
 	return carB_t == 0;
 }
-static void ct_car_back_A(void)
+void ct_car_back_A(void)
 {
 	car_back_A();
-	carA_t = 5;
+	carA_t = 10;
+	carA_di = 0;
 }
-static void ct_car_back_B(void)
+void ct_car_back_B(void)
 {
 	car_back_B();
-	carB_t = 5;
+	carB_t = 10;
+	carB_di = 0;
 }
-static void ct_car_adv_A(void)
+void ct_car_adv_A(void)
 {
 	car_adv_A();
-	carA_t = 5;
+	carA_t = 10;
+	carA_di = 1;
 }
-static void ct_car_adv_B(void)
+void ct_car_adv_B(void)
 {
 	car_adv_B();
-	carB_t = 5;
+	carB_t = 10;
+	carB_di = 1;
 }
 
-static void stay_for(uchar t)
+void stay_for(uchar t)
 {
 	stay = 1;
 	stay_time = t;
@@ -361,11 +367,27 @@ void timer1_int(void) interrupt 3
 		buzzer_next = 1;
 	}
 	if (carA_t) {
-		if (--carA_t == 4)
+		--carA_t;
+		if (carA_t == 9 || carA_t == 4)
 			car_stop_A();
+		if (carA_t == 5) {
+			if (carA_di) {
+				car_adv_A();
+			} else {
+				car_back_A();
+			}
+		}
 	}
 	if (carB_t) {
-		if (--carB_t == 4)
+		--carB_t;
+		if (carB_t == 9 || carB_t == 4)
 			car_stop_B();
+		if (carB_t == 5) {
+			if (carB_di) {
+				car_adv_B();
+			} else {
+				car_back_B();
+			}
+		}
 	}
 }
