@@ -1,4 +1,4 @@
-#include <reg52.h>
+#include <regx51.h>
 #include "common.h"
 
 uchar ctl, cth;
@@ -8,12 +8,14 @@ uchar ctl, cth;
  * Time delay subroutine
  *
  ******************************/
+/*
 void delay(int ms)
 {
 	int i;
 	while (ms--)
 		for (i = 0; i< 1000; i++);
 }
+*/
 
 void delay_us(int us)
 {

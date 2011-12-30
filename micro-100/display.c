@@ -1,4 +1,4 @@
-#include <reg52.h>
+#include <regx51.h>
 #include "common.h"
 #include "display.h"
 
