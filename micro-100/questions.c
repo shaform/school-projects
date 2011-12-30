@@ -225,4 +225,4 @@ uchar question_get_music(void)
 {
 	return questions[qnum].music_id;
 }
-// vim: set fileencodings=utf8:
+// vim: set fileencodings=cp950:
