@@ -1,4 +1,4 @@
-#include <reg52.h>
+#include <regx51.h>
 #include "common.h"
 #include "buzzer.h"
 
@@ -77,6 +77,8 @@ void buzzer_play(uchar *notes)
 	ptm = notes;
 	b_buzzer_time = 1;
 }
+void buzzer_stop(void) {TR0 = 0;}
+void buzzer_start(void) {TR0 = 1;}
 // ---------------------------------------------------- //
 
 void buzzer_play_num(uchar n)

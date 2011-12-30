@@ -1,4 +1,4 @@
-#include <reg52.h>
+#include <regx51.h>
 #include "common.h"
 #include "display.h"
 #include "questions.h"
@@ -213,20 +213,20 @@ void game_routine(void)
 			break;
 		case AWIN:
 			display_clear();
-			display_string("Player1 is the winner!\r\n"
-					"Press A to restart!!\r\n");
+			display_string("Player1 is the winner!\r\n");
+			display_string("Press D to restart!!\r\n");
 			display_stop();
 			state = FINAL;
 			break;
 		case BWIN:
 			display_clear();
-			display_string("Player2 is the winner!\r\n"
-					"Press A to restart!!\r\n");
+			display_string("Player2 is the winner!\r\n");
+			display_string("Press D to restart!!\r\n");
 			display_stop();
 			state = FINAL;
 			break;
 		case FINAL:
-			if (get_input_A() == BTNA || get_input_B() == BTNA)
+			if (get_input_A() == BTND || get_input_B() == BTND)
 				state = INIT;
 			break;
 	}
