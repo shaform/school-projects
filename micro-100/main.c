@@ -70,7 +70,6 @@ void ct_car_adv_B(void);
 void main()
 {
 	init();
-//	buzzer_play_num(1);
 	while (1) game_routine();
 }
 
@@ -119,6 +118,7 @@ void game_routine(void)
 				state = CLICK_START;
 			break;
 		case NEXT_Q:
+			buzzer_stop();
 			buzzer_play_num(0);  // Stop music
 			display_clear();
 			display_string("Next question!!\r\n"
@@ -148,6 +148,8 @@ void game_routine(void)
 				state = NEXT_Q;
 			break;
 		case ADV_CAR:
+			buzzer_stop();
+			buzzer_play_num(0);  // Stop music
 			display_clear();
 			switch (guess_result) {
 				case ARIGHT:
