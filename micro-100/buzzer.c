@@ -28,18 +28,12 @@ code uchar five[] = {
 	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
 	2,2,6, 0,0,0,
 };
-code uchar love[] = {
-	6,2,1, 7,2,1, 8,2,4, 8,2,2, 3,2,2, 6,2,6, 6,2,1,
-	5,2,1, 4,2,1, 3,2,6, 3,2,1, 4,2,1, 5,2,1,
-	2,2,6, 0,0,0,
-};
 
 code uchar *music[] = {
 	0,
 	&year,
 	&nono,
 	&five,
-	&love,
 };
 // Freq table, get from internet
 // 0 = END, 9 = SILIENCE

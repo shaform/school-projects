@@ -32,7 +32,7 @@
 #define BRIGHT 2
 #define BWRONG 3
 
-const char *ANSWERS[4] = {"A", "B", "C", "D"};
+code const char *ANSWERS[4] = {"A", "B", "C", "D"};
 
 // ---------------------------------------------------- //
 
@@ -98,7 +98,7 @@ void game_routine(void)
 			if (ct_car_is_B_free() && !car_is_B_back())
 				ct_car_back_B();
 
-			if (car_is_A_back() && car_is_B_back())
+			if (car_is_A_back() && car_is_B_back() && ct_car_is_A_free() && ct_car_is_B_free())
 				state = GAME_START;
 			break;
 		case GAME_START:
@@ -137,7 +137,7 @@ void game_routine(void)
 			if (temp_m) buzzer_play_num(temp_m);
 
 			// Set waiting time
-			wait_time = TIME_SEC*2;
+			wait_time = TIME_SEC*4;
 			wait_a = 1;
 			state = WAIT_A;
 			break;
@@ -166,7 +166,7 @@ void game_routine(void)
 			if (guess_result == ARIGHT || guess_result == BRIGHT) {
 				display_string("The answer is ");
 				display_string(ANSWERS[question_get_answer()-1]);
-				display_string("\n\n");
+				display_string("\r\n");
 			}
 			display_stop();
 
@@ -212,18 +212,24 @@ void game_routine(void)
 				state = BWIN;
 			break;
 		case AWIN:
-			display_clear();
-			display_string("Player1 is the winner!\r\n");
-			display_string("Press D to restart!!\r\n");
-			display_stop();
-			state = FINAL;
+			if (ct_car_is_A_free() && ct_car_is_B_free()) {
+				display_clear();
+				display_string("Player1 is the winner!\r\n");
+				display_string("Press D to restart!!\r\n");
+				display_stop();
+				state = FINAL;
+				stay_for(TIME_SEC*5);
+			}
 			break;
 		case BWIN:
-			display_clear();
-			display_string("Player2 is the winner!\r\n");
-			display_string("Press D to restart!!\r\n");
-			display_stop();
-			state = FINAL;
+			if (ct_car_is_A_free() && ct_car_is_B_free()) {
+				display_clear();
+				display_string("Player2 is the winner!\r\n");
+				display_string("Press D to restart!!\r\n");
+				display_stop();
+				state = FINAL;
+				stay_for(TIME_SEC*5);
+			}
 			break;
 		case FINAL:
 			if (get_input_A() == BTND || get_input_B() == BTND)
