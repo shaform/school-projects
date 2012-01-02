@@ -45,6 +45,8 @@ uchar temp_m, temp_a, temp_b;
 bit buzzer_next = 0;
 bit buzzer_pause = 0;
 
+uchar click_A, click_B;
+
 uchar state, next_state;
 
 // ---------------------------------------------------- //
@@ -77,9 +79,7 @@ void main()
 
 void game_routine(void)
 {
-	if (stay) return;
-
-	switch (state) {
+	if (!stay) switch (state) {
 		case INIT:
 			display_clear();
 			display_stop();
@@ -137,7 +137,7 @@ void game_routine(void)
 			if (temp_m) buzzer_play_num(temp_m);
 
 			// Set waiting time
-			wait_time = TIME_SEC*4;
+			wait_time = TIME_SEC*5;
 			wait_a = 1;
 			state = WAIT_A;
 			break;
@@ -195,6 +195,7 @@ void game_routine(void)
 					"Ready?\r\n");
 			display_stop();
 			state = CLICK_GO;
+			click_A = click_B = 0;
 			stay_for(TIME_SEC*3);
 			break;
 		case CLICK_GO:
@@ -204,10 +205,14 @@ void game_routine(void)
 			state = CLICK_RUN;
 			break;
 		case CLICK_RUN:
-			if (ct_car_is_A_free() && get_input_A())
+			if (ct_car_is_A_free() && get_input_A() && click_A++ >= 5) {
+				click_A = 0;
 				ct_car_adv_A();
-			if (ct_car_is_B_free() && get_input_B())
+			}
+			if (ct_car_is_B_free() && get_input_B() && click_B++ >= 5) {
+				click_B = 0;
 				ct_car_adv_B();
+			}
 			if (car_is_A_front())
 				state = AWIN;
 			if (car_is_B_front())
@@ -221,6 +226,7 @@ void game_routine(void)
 				display_stop();
 				state = FINAL;
 				stay_for(TIME_SEC*5);
+				buzzer_play_num(4);
 			}
 			break;
 		case BWIN:
@@ -231,6 +237,7 @@ void game_routine(void)
 				display_stop();
 				state = FINAL;
 				stay_for(TIME_SEC*5);
+				buzzer_play_num(4);
 			}
 			break;
 		case FINAL:
@@ -306,26 +313,22 @@ bit ct_car_is_B_free(void)
 }
 void ct_car_back_A(void)
 {
-	car_back_A();
-	carA_t = 10;
+	carA_t = 12;
 	carA_di = 0;
 }
 void ct_car_back_B(void)
 {
-	car_back_B();
-	carB_t = 10;
+	carB_t = 12;
 	carB_di = 0;
 }
 void ct_car_adv_A(void)
 {
-	car_adv_A();
-	carA_t = 10;
+	carA_t = 12;
 	carA_di = 1;
 }
 void ct_car_adv_B(void)
 {
-	car_adv_B();
-	carB_t = 10;
+	carB_t = 12;
 	carB_di = 1;
 }
 
@@ -376,9 +379,9 @@ void timer1_int(void) interrupt 3
 	}
 	if (carA_t) {
 		--carA_t;
-		if (carA_t == 9 || carA_t == 4)
+		if (carA_t == 9)
 			car_stop_A();
-		if (carA_t == 5) {
+		if (carA_t == 11) {
 			if (carA_di) {
 				car_adv_A();
 			} else {
@@ -388,9 +391,9 @@ void timer1_int(void) interrupt 3
 	}
 	if (carB_t) {
 		--carB_t;
-		if (carB_t == 9 || carB_t == 4)
+		if (carB_t == 9)
 			car_stop_B();
-		if (carB_t == 5) {
+		if (carB_t == 11) {
 			if (carB_di) {
 				car_adv_B();
 			} else {
