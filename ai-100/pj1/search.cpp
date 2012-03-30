@@ -4,6 +4,7 @@
 #include <set>
 #include <vector>
 #include <algorithm>
+#include <functional>
 
 using namespace std;
 
@@ -12,8 +13,8 @@ vector<int> A_star_search(const char *, int (*)(const int[]));
 
 static bool initialized = false;
 
-// The positions to be exchanged
 const int MAX_MOVES = 24;
+// The positions to be exchanged
 static int NEXT_MOVE[MAX_MOVES][2] = {
     {0, 1}, {1, 2},
     {3, 4}, {4, 5},
@@ -29,6 +30,7 @@ static int NEXT_MOVE[MAX_MOVES][2] = {
     {4, 1}, {7, 4},
     {5, 2}, {8, 5},
 };
+// The directions of each exchange:
 // L-D-R-U 1-2-3-4
 static int NEXT_DI[MAX_MOVES] = {
     3, 3, 3, 3, 3, 3,
@@ -46,12 +48,12 @@ struct Move {
     int prev;
     int curr;
     int move;
+    Move(int n) : curr(n), prev(0), move(0) {}
+    Move() : prev(0), curr(0), move(0) {}
     bool operator<(const Move &rhs) const
     {
         return curr < rhs.curr;
     }
-    Move(int n) : curr(n) {}
-    Move() {}
 };
 
 struct Node {
@@ -59,9 +61,22 @@ struct Node {
     int board[9];
     Move move;
 
+    Node() : f(0), g(0) {}
+    Node(const char *str) : f(0), g(0)
+    {
+        for (int i=0; i<9; ++i) {
+            board[i] = str[i]-'0';
+        }
+        move.curr = s.hash();
+    }
+
     bool operator<(const Node &rhs) const
     {
         return f < rhs.f;
+    }
+    bool operator>(const Node &rhs) const
+    {
+        return f > rhs.f;
     }
 
     int hash()
@@ -72,6 +87,13 @@ struct Node {
             mul *= 10;
         }
         return h;
+    }
+
+    void to_string(char *str)
+    {
+        for (int i=0; i<9; ++i)
+            str[i] = board[i] + '0';
+        str[9] = '\0';
     }
 
     bool goal_test()
@@ -182,17 +204,11 @@ void proj1(const char *source, int algo, int heuristic, std::vector<int> *sol)
 
 vector<int> A_star_search(const char *source, int (*h)(const int[]))
 {
-    priority_queue<Node> frontier;
+    priority_queue<Node, vector<Node>, greater<Node> > frontier;
     set<Move> explored;
 
-    Node s;
-    s.f = 0;
-    s.g = 0;
-    for (int i=0; i<9; ++i)
-        s.board[i] = source[i]-'0';
-    s.move.move = 0;
-    s.move.curr = s.hash();
-    s.move.prev = 0;
+    // Initialize the start node
+    Node s(source);
 
     frontier.push(s);
 
