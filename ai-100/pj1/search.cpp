@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 #include <queue>
 #include <set>
 #include <vector>
@@ -11,11 +12,11 @@ using namespace std;
 
 vector<int> A_star_search(const char *, int (*)(const int[]));
 
-static bool initialized = false;
+bool initialized = false;
 
 const int MAX_MOVES = 24;
 // The positions to be exchanged
-static int NEXT_MOVE[MAX_MOVES][2] = {
+int NEXT_MOVE[MAX_MOVES][2] = {
     {0, 1}, {1, 2},
     {3, 4}, {4, 5},
     {6, 7}, {7, 8},
@@ -32,24 +33,26 @@ static int NEXT_MOVE[MAX_MOVES][2] = {
 };
 // The directions of each exchange:
 // L-D-R-U 1-2-3-4
-static int NEXT_DI[MAX_MOVES] = {
+int NEXT_DI[MAX_MOVES] = {
     3, 3, 3, 3, 3, 3,
     2, 2, 2, 2, 2, 2,
     1, 1, 1, 1, 1, 1,
     4, 4, 4, 4, 4, 4,
 };
 
-static void init()
+void init()
 {
     initialized = true;
 }
 
 struct Move {
-    int prev;
-    int curr;
-    int move;
+    int prev;  // hash of previous state
+    int curr;  // hash of current state
+    int move;  // move to get to current state
+
     Move(int n) : curr(n), prev(0), move(0) {}
     Move() : prev(0), curr(0), move(0) {}
+
     bool operator<(const Move &rhs) const
     {
         return curr < rhs.curr;
@@ -58,7 +61,7 @@ struct Move {
 
 struct Node {
     int f, g;
-    int board[9];
+    int board[9];  // puzzle configuration
     Move move;
 
     Node() : f(0), g(0) {}
@@ -67,7 +70,7 @@ struct Node {
         for (int i=0; i<9; ++i) {
             board[i] = str[i]-'0';
         }
-        move.curr = s.hash();
+        move.curr = hash();
     }
 
     bool operator<(const Node &rhs) const
@@ -78,7 +81,6 @@ struct Node {
     {
         return f > rhs.f;
     }
-
     int hash()
     {
         int h= 0, mul = 1;
@@ -88,14 +90,12 @@ struct Node {
         }
         return h;
     }
-
     void to_string(char *str)
     {
         for (int i=0; i<9; ++i)
             str[i] = board[i] + '0';
         str[9] = '\0';
     }
-
     bool goal_test()
     {
         int nx = 0;
@@ -114,7 +114,6 @@ struct Node {
         }
         return true;
     }
-
     vector<Node> moves()
     {
         vector<Node> succs;
@@ -136,7 +135,7 @@ struct Node {
     }
 };
 
-static bool check_input(const char *str)
+bool check_input(const char *str)
 {
     if (strlen(str) != 9)
         return false;
@@ -187,16 +186,82 @@ static bool check_input(const char *str)
     return true;
 }
 
-int test_h(const int[])
+
+// test, always 0
+int heuristic_test(const int[])
 { return 0; }
+
+
+
+// total number of misplaced tiles
+int heuristic_misplace(const int st[])
+{
+    // get the number of tiles
+    int num = 9;
+    for (int i=0; i<9; ++i) {
+        if (st[i] == 0) {
+            --num;
+        }
+    }
+
+    // check misplacements
+    int h = 0;
+    for (int i=1; i<=num; ++i) {
+        if (st[9-num+i-1] != i) {
+            h++;
+        }
+    }
+
+    return h;
+}
+
+// Manhattan distance
+int heuristic_manhattan(const int st[])
+{
+    // get the number of tiles
+    int num = 9;
+    for (int i=0; i<9; ++i) {
+        if (st[i] == 0) {
+            --num;
+        }
+    }
+
+    // check distances
+    int h = 0;
+    for (int i=1; i<=num; ++i) {
+        int c = 9-num+i-1;
+        for (int j=0; j<9; ++j) {
+            if (st[j] == i) {
+                int dx = abs((c%3)-(j%3));
+                int dy = abs((c/3)-(j/3));
+                h += (dx+dy);
+            }
+        }
+    }
+
+    return h;
+}
+
 void proj1(const char *source, int algo, int heuristic, std::vector<int> *sol)
 {
     if (!initialized)
         init();
 
+    if (sol == 0) {
+        return;
+    }
+
     if (check_input(source)) {
-        *sol = A_star_search(source, test_h);
-    } else if (sol != 0) {
+        int (*h)(const int[]);
+        if (heuristic == 0) {
+            h = heuristic_misplace;
+        } else if (heuristic == 1) {
+            h = heuristic_manhattan;
+        } else {
+            h = heuristic_test;
+        }
+        *sol = A_star_search(source, h);
+    } else {
         sol->clear();
     }
 }
