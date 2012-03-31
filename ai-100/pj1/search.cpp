@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cmath>
 #include <queue>
+#include <stack>
 #include <set>
 #include <vector>
 #include <algorithm>
@@ -9,14 +10,25 @@
 
 using namespace std;
 
+// ---------- header ---------- //
 
+void init();
+bool check_input(const char*);
+
+int heuristic_test(const int[]);
+int heuristic_misplace(const int[]);
+int heuristic_manhattan(const int[]);
+int heuristic_database(const int[]);
+
+void proj1(const char *, int, int, std::vector<int> *);
 vector<int> A_star_search(const char *, int (*)(const int[]));
+vector<int> IDS(const char *);
 
-bool initialized = false;
+// ---------- constants ---------- //
 
 const int MAX_MOVES = 24;
 // The positions to be exchanged
-int NEXT_MOVE[MAX_MOVES][2] = {
+const int NEXT_MOVE[MAX_MOVES][2] = {
     {0, 1}, {1, 2},
     {3, 4}, {4, 5},
     {6, 7}, {7, 8},
@@ -33,17 +45,15 @@ int NEXT_MOVE[MAX_MOVES][2] = {
 };
 // The directions of each exchange:
 // L-D-R-U 1-2-3-4
-int NEXT_DI[MAX_MOVES] = {
+const int NEXT_DI[MAX_MOVES] = {
     3, 3, 3, 3, 3, 3,
     2, 2, 2, 2, 2, 2,
     1, 1, 1, 1, 1, 1,
     4, 4, 4, 4, 4, 4,
 };
 
-void init()
-{
-    initialized = true;
-}
+
+// ---------- declarations ---------- //
 
 struct Move {
     int prev;  // hash of previous state
@@ -135,6 +145,18 @@ struct Node {
     }
 };
 
+// ---------- global variables ---------- //
+
+bool initialized = false;
+
+// ---------- helper functions ---------- //
+
+
+void init()
+{
+    initialized = true;
+}
+
 bool check_input(const char *str)
 {
     if (strlen(str) != 9)
@@ -187,10 +209,12 @@ bool check_input(const char *str)
 }
 
 
+// ---------- heuristic functions ---------- //
+
+
 // test, always 0
 int heuristic_test(const int[])
 { return 0; }
-
 
 
 // total number of misplaced tiles
@@ -242,6 +266,13 @@ int heuristic_manhattan(const int st[])
     return h;
 }
 
+int heuristic_database(const int st[])
+{
+    return 0;
+}
+
+// ---------- search functions ---------- //
+
 void proj1(const char *source, int algo, int heuristic, std::vector<int> *sol)
 {
     if (!initialized)
@@ -267,20 +298,35 @@ void proj1(const char *source, int algo, int heuristic, std::vector<int> *sol)
 }
 
 
+vector<int> IDS(const char *source)
+{
+    Node s(source);
+    int max_depth = 1;
+    while (true) {
+        stack<Node> stk;
+        stk.push(s);
+
+        while (!stk.empty()) {
+        }
+        ++max_depth;
+    }
+}
+
 vector<int> A_star_search(const char *source, int (*h)(const int[]))
 {
     priority_queue<Node, vector<Node>, greater<Node> > frontier;
     set<Move> explored;
 
-    // Initialize the start node
     Node s(source);
 
     frontier.push(s);
 
     while (!frontier.empty()) {
+        // extract a node with minimal f value
         Node nd = frontier.top();
 
         if (nd.goal_test()) {
+            // construct the path
             vector<int> path;
             Move mv = nd.move;
             while (mv.move) {
