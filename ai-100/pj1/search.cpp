@@ -21,7 +21,7 @@ int heuristic_manhattan(const int[]);
 int heuristic_database(const int[]);
 
 void proj1(const char *, int, int, std::vector<int> *);
-vector<int> A_star_search(const char *, int (*)(const int[]));
+vector<int> A_star_search(const char *, int (*)(const int[]), bool);
 vector<int> IDS(const char *);
 
 // ---------- constants ---------- //
@@ -59,13 +59,15 @@ struct Move {
     int prev;  // hash of previous state
     int curr;  // hash of current state
     int move;  // move to get to current state
+    int id;  // used in tree search to distinguish nodes
+    int pvid;  // used in tree search to distinguish nodes
 
-    Move(int n) : curr(n), prev(0), move(0) {}
-    Move() : prev(0), curr(0), move(0) {}
+    Move(int n) : curr(n), prev(0), move(0), id(0), pvid(0) {}
+    Move() : prev(0), curr(0), move(0), id(0), pvid(0) {}
 
     bool operator<(const Move &rhs) const
     {
-        return curr < rhs.curr;
+        return curr < rhs.curr || (curr == rhs.curr && id < rhs.id);
     }
 };
 
@@ -284,14 +286,20 @@ void proj1(const char *source, int algo, int heuristic, std::vector<int> *sol)
 
     if (check_input(source)) {
         int (*h)(const int[]);
-        if (heuristic == 0) {
+        if (heuristic == 1) {
             h = heuristic_misplace;
-        } else if (heuristic == 1) {
+        } else if (heuristic == 2) {
             h = heuristic_manhattan;
         } else {
             h = heuristic_test;
         }
-        *sol = A_star_search(source, h);
+        if (algo == 1) {
+            *sol = A_star_search(source, h, false);
+        } else if (algo == 2) {
+            *sol = IDS(source);
+        } else {
+            *sol = A_star_search(source, h, true);
+        }
     } else {
         sol->clear();
     }
@@ -301,18 +309,48 @@ void proj1(const char *source, int algo, int heuristic, std::vector<int> *sol)
 vector<int> IDS(const char *source)
 {
     Node s(source);
+    vector<int> path;
+
     int max_depth = 1;
     while (true) {
         stack<Node> stk;
         stk.push(s);
 
         while (!stk.empty()) {
+            Node nd = stk.top();
+            stk.pop();
+
+            // contruct path
+            while (nd.g && nd.g <= path.size()) {
+                path.pop_back();
+            }
+            path.push_back(nd.move.move);
+
+            if (nd.goal_test()) {
+                return path;
+            }
+
+            if (nd.g >= max_depth) {
+                continue;
+            }
+            // generate successors
+            vector<Node> moves = nd.moves();
+            for (vector<Node>::iterator it = moves.begin();
+                    it != moves.end(); ++it) {
+                it->g = nd.g + 1;
+                stk.push(*it);
+            }
+
         }
+
+        while (!stk.empty())
+            stk.pop();
         ++max_depth;
+
     }
 }
 
-vector<int> A_star_search(const char *source, int (*h)(const int[]))
+vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
 {
     priority_queue<Node, vector<Node>, greater<Node> > frontier;
     set<Move> explored;
@@ -320,6 +358,8 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]))
     Node s(source);
 
     frontier.push(s);
+
+    int seq = 0;  // sequence number for tree search
 
     while (!frontier.empty()) {
         // extract a node with minimal f value
@@ -332,6 +372,9 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]))
             while (mv.move) {
                 path.push_back(mv.move);
                 mv.curr = mv.prev;
+                if (tree) {
+                    mv.id = mv.pvid;
+                }
                 mv = *explored.find(mv);
             }
 
@@ -340,12 +383,17 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]))
         }
 
         frontier.pop();
+        // generate successors
         if (explored.find(nd.move) == explored.end()) {
             explored.insert(nd.move);
             vector<Node> moves = nd.moves();
             for (vector<Node>::iterator it = moves.begin();
                     it != moves.end(); ++it) {
-                if (explored.find(it->move) == explored.end()) {
+                if (tree) {
+                    it->move.id = ++seq;
+                    it->move.pvid = nd.move.id;
+                }
+                if (tree || explored.find(it->move) == explored.end()) {
                     it->g = nd.g + 1;
                     it->f = nd.g + h(it->board);
                     frontier.push(*it);

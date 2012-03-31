@@ -16,7 +16,7 @@ int heuristic_manhattan(const int[]);
 int heuristic_database(const int[]);
 
 void proj1(const char *, int, int, std::vector<int> *);
-vector<int> A_star_search(const char *, int (*)(const int[]));
+vector<int> A_star_search(const char *, int (*)(const int[]), bool);
 vector<int> IDS(const char *);
 
 // ---------- help functions ---------- //
@@ -81,27 +81,33 @@ int main()
 
     printf("Easy input...\n");
     printf("---\n125\n034\n678\n---\n");
-    proj1("125034678", 0, 0, &sol);
-    for (vector<int>::iterator it = sol.begin();
-            it != sol.end(); ++it) {
-        int step = *it;
-        char di;
-        switch (step % 10) {
-            case 1:
-                di = '<';
-                break;
-            case 2:
-                di = 'v';
-                break;
-            case 3:
-                di = '>';
-                break;
-            case 4:
-                di = '^';
-                break;
+    for (int i=1; i<=3; ++i)
+        for (int j=1; j<=2; ++j) {
+            proj1("125304678", i, j, &sol);
+            printf("------------------\n"
+                    "Path length: %u\n"
+                    "-----------------\n", sol.size());
+            for (vector<int>::iterator it = sol.begin();
+                    it != sol.end(); ++it) {
+                int step = *it;
+                char di;
+                switch (step % 10) {
+                    case 1:
+                        di = '<';
+                        break;
+                    case 2:
+                        di = 'v';
+                        break;
+                    case 3:
+                        di = '>';
+                        break;
+                    case 4:
+                        di = '^';
+                        break;
+                }
+                printf("step: %d -> %c\n", step / 10, di);
+            }
         }
-        printf("step: %d -> %c\n", step / 10, di);
-    }
 
     printf("Invalid input...\n");
 
