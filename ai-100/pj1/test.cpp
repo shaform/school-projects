@@ -136,13 +136,15 @@ int main()
             k /= 10;
         }
 
-        // skip unreachable states
-        if (!ck_ans && strcmp(str, PUZZLES[MAX_PUZZLES-1]) == 0) {
-            continue;
-        }
-        // brute force check
         bool ck = check_input(str), ck_ans = false;
         qsort(str, 9, sizeof(char), compare);
+
+        // skip unreachable states
+        if (strcmp(str, PUZZLES[MAX_PUZZLES-1]) == 0) {
+            continue;
+        }
+
+        // brute force check
         for (int j=0; j<MAX_PUZZLES-1; ++j) {
             if (strcmp(str, PUZZLES[j]) == 0) {
                 ck_ans = true;
