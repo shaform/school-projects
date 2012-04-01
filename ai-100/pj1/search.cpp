@@ -32,7 +32,23 @@ struct Info {
 
 extern Info info;
 
+const int MAX_PUZZLES = 8;
+extern const char *PUZZLES[MAX_PUZZLES];
+
+const int MAX_DATABASE = 6;
+
 // ---------- constants ---------- //
+
+const char *PUZZLES[MAX_PUZZLES] = {
+    "000000001",
+    "000000012",
+    "000000123",
+    "000001234",
+    "000012345",
+    "000123456",
+    "001234567",
+    "012345678",
+};
 
 const int MAX_MOVES = 24;
 // The positions to be exchanged
@@ -59,8 +75,6 @@ const int NEXT_DI[MAX_MOVES] = {
     1, 1, 1, 1, 1, 1,
     4, 4, 4, 4, 4, 4,
 };
-
-const int MAX_DATABASE = 4;
 
 // ---------- declarations ---------- //
 
@@ -90,6 +104,13 @@ struct Node {
     {
         for (int i=0; i<9; ++i) {
             board[i] = str[i]-'0';
+        }
+        move.curr = hash();
+    }
+    Node(const int *st) : f(0), g(0)
+    {
+        for (int i=0; i<9; ++i) {
+            board[i] = st[i];
         }
         move.curr = hash();
     }
@@ -158,9 +179,11 @@ struct Node {
 
 struct Frontier {
     vector<Node> heap;
+    set<int> inserted;
 
     void push(const Node &u)
     {
+        inserted.insert(u.hash());
         heap.push_back(u);
         push_heap(heap.begin(), heap.end(), greater<Node>());
 
@@ -168,6 +191,10 @@ struct Frontier {
     void replace_or_push(const Node &u)
     {
         int h = u.hash();
+        if (inserted.find(h) == inserted.end()) {
+            push(u);
+            return;
+        }
         for (int i=0; i< heap.size(); ++i) {
             if (heap[i].hash() == h) {
                 if (heap[i] > u) {
@@ -180,7 +207,6 @@ struct Frontier {
                 return;
             }
         }
-        push(u);
     }
     unsigned size() const
     {
@@ -192,6 +218,7 @@ struct Frontier {
     }
     void pop()
     {
+        inserted.erase(heap[0].hash());
         pop_heap(heap.begin(), heap.end(), greater<Node>());
         heap.pop_back();
     }
@@ -209,6 +236,39 @@ map<int, int> db;
 
 // ---------- helper functions ---------- //
 
+void gen_db()
+{
+    db.clear();
+
+    for (int i=0; i<MAX_DATABASE; ++i) {
+        // generate database using BFS
+        queue<Node> frontier;
+        set<Move> explored;
+
+        Node s(PUZZLES[i]);
+
+        frontier.push(s);
+
+        while (!frontier.empty()) {
+            Node nd = frontier.front();
+            frontier.pop();
+
+            // generate successors
+            if (explored.find(nd.move) == explored.end()) {
+                explored.insert(nd.move);
+                db[nd.move.curr] = nd.g;
+                vector<Node> moves = nd.moves();
+                for (vector<Node>::iterator it = moves.begin();
+                        it != moves.end(); ++it) {
+                    if (explored.find(it->move) == explored.end()) {
+                        it->g = nd.g + 1;
+                        frontier.push(*it);
+                    }
+                }
+            }
+        }
+    }
+}
 
 void init()
 {
@@ -328,7 +388,16 @@ int heuristic_manhattan(const int st[])
 // store exact distances up to MAX_DATABASE
 int heuristic_database(const int st[])
 {
-    return 0;
+    int part[9];
+    for (int i=0; i<9; ++i) {
+        if (st[i] > MAX_DATABASE) {
+            part[i] = 0;
+        } else {
+            part[i] = st[i];
+        }
+    }
+    Node t(part);
+    return db[t.move.curr];
 }
 
 // ---------- search functions ---------- //
@@ -388,10 +457,12 @@ vector<int> IDS(const char *source)
             ++info.node_expanded;
 
             // contruct path
-            while (nd.g && nd.g <= path.size()) {
-                path.pop_back();
+            if (nd.g) {
+                while (nd.g <= path.size()) {
+                    path.pop_back();
+                }
+                path.push_back(nd.move.move);
             }
-            path.push_back(nd.move.move);
 
             if (nd.goal_test()) {
                 return path;

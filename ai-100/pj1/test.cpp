@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -26,19 +27,14 @@ struct Info {
 
 extern Info info;
 
-// ---------- constants ---------- //
-const int MAX_CONFS = 1000000000;
 const int MAX_PUZZLES = 8;
-const char *PUZZLES[MAX_PUZZLES] = {
-    "000000001",
-    "000000012",
-    "000000123",
-    "000001234",
-    "000012345",
-    "000123456",
-    "001234567",
-    "012345678",
-};
+extern const char *PUZZLES[MAX_PUZZLES];
+
+const int MAX_DATABASE = 6;
+
+// ---------- constants ---------- //
+
+const int MAX_CONFS = 1000000000;
 
 // ---------- help functions ---------- //
 
@@ -57,8 +53,73 @@ int main()
     printf("-- Initializing --\n");
     init();
 
+#if FORCE_CHECK
+    // ---------- check passed at 4/1 5:10 PM ---------- //
     printf("-- Checking heuristic functions --\n");
+    for (int i=0; i<MAX_PUZZLES; ++i) {
+        printf("check #%d\n", i+1);
+        char str[10];
+        memcpy(str, PUZZLES[i], sizeof(str));
+        do {
+            // generate integer representation
+            int st[9];
+            for (int j=0; j<9; ++j) {
+                st[j] = str[j] - '0';
+            }
 
+            int act;
+
+            // check h1
+            int mis = 0;
+            for (int j=0; j<9; ++j) {
+                if (str[j] != '0' && str[j] != PUZZLES[i][j]) {
+                    ++mis;
+                }
+            }
+
+            act = heuristic_misplace(st);
+            if (mis != act) {
+                printf("check failed: h1() for %s, expect: %d, actual: %d\n", str, mis, act);
+            }
+
+            // check h2
+            int d = 0;
+            for (int j='1'; j<='9'; ++j) {
+                int x = 9, y = 9;
+                for (int k=0; k<9; ++k) {
+                    if (PUZZLES[i][k] == j) {
+                        x = k;
+                    }
+                    if (str[k] == j) {
+                        y = k;
+                    }
+                }
+                if (x == 9) {
+                    break;
+                } else {
+                    d += abs((x%3)-(y%3)) + abs((x/3)-(y/3));
+                }
+            }
+
+            act = heuristic_manhattan(st);
+            if (d != act) {
+                printf("check failed: h2() for %s, expect: %d, actual: %d\n", str, d, act);
+            }
+
+            // check h3
+            int dis;
+            act = heuristic_database(st);
+            if (i < MAX_DATABASE) {
+                dis =  A_star_search(str, heuristic_manhattan, false).size();
+            } else {
+                dis = act;
+            }
+            if (dis != act) {
+                printf("check failed: h3() for %s, expect: %d, actual: %d\n", str, dis, act);
+            }
+        } while (next_permutation(str, str+9));
+    }
+#endif
 
 #if FORCE_CHECK
     // ---------- check passed at 4/1 2:30 PM ---------- //
