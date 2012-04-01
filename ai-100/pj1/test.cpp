@@ -61,7 +61,7 @@ int main()
 
 
 #if FORCE_CHECK
-    // ---------- check passed at 3/31 9:00 AM ---------- //
+    // ---------- check passed at 4/1 2:30 PM ---------- //
     printf("-- Checking invalid inputs --\n");
     for (int i=0; i<MAX_CONFS; ++i) {
         // print progress
@@ -69,20 +69,26 @@ int main()
             printf("check #%d\n", i/(MAX_CONFS/10));
         }
         // generate input
-        char str[] = "0000000000", str2[] = "0000000000";
+        char str[] = "000000000", str2[] = "000000000";
         for (int j=0, k=i; k; ++j) {
             str2[j] = (str[j] += k%10);
             k /= 10;
         }
+
+        // skip unreachable states
+        if (!ck_ans && strcmp(str, PUZZLES[MAX_PUZZLES-1]) == 0) {
+            continue;
+        }
         // brute force check
         bool ck = check_input(str), ck_ans = false;
-        qsort(str, 10, sizeof(char), compare);
-        for (int j=0; j<MAX_PUZZLES; ++j) {
+        qsort(str, 9, sizeof(char), compare);
+        for (int j=0; j<MAX_PUZZLES-1; ++j) {
             if (strcmp(str, PUZZLES[j]) == 0) {
                 ck_ans = true;
                 break;
             }
         }
+
         if (ck_ans != ck) {
                 printf("check #%d failed: %s\n", i, str2);
         }
