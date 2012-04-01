@@ -297,6 +297,12 @@ bool check_input(const char *str)
         nums[n] = true;
     }
 
+    // handle all zeros                                                         
+                                                                                
+    if (!nums[1]) {                                                             
+        return false;                                                           
+    }
+
     // check numbers are consecutive
     bool revs = false;
     for (int i=0; i<9; ++i) {
