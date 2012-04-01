@@ -4,6 +4,7 @@
 #include <queue>
 #include <stack>
 #include <set>
+#include <map>
 #include <vector>
 #include <algorithm>
 #include <functional>
@@ -23,6 +24,13 @@ int heuristic_database(const int[]);
 void proj1(const char *, int, int, std::vector<int> *);
 vector<int> A_star_search(const char *, int (*)(const int[]), bool);
 vector<int> IDS(const char *);
+
+struct Info {
+    unsigned node_expanded;
+    unsigned space_complexity;
+};
+
+extern Info info;
 
 // ---------- constants ---------- //
 
@@ -52,6 +60,7 @@ const int NEXT_DI[MAX_MOVES] = {
     4, 4, 4, 4, 4, 4,
 };
 
+const int MAX_DATABASE = 4;
 
 // ---------- declarations ---------- //
 
@@ -93,7 +102,7 @@ struct Node {
     {
         return f > rhs.f;
     }
-    int hash()
+    int hash() const
     {
         int h= 0, mul = 1;
         for (int i=0; i<9; ++i) {
@@ -102,13 +111,13 @@ struct Node {
         }
         return h;
     }
-    void to_string(char *str)
+    void to_string(char *str) const
     {
         for (int i=0; i<9; ++i)
             str[i] = board[i] + '0';
         str[9] = '\0';
     }
-    bool goal_test()
+    bool goal_test() const
     {
         int nx = 0;
         for (int i=0; i<9; ++i) {
@@ -126,7 +135,7 @@ struct Node {
         }
         return true;
     }
-    vector<Node> moves()
+    vector<Node> moves() const
     {
         vector<Node> succs;
         Node nd;
@@ -147,9 +156,56 @@ struct Node {
     }
 };
 
+struct Frontier {
+    vector<Node> heap;
+
+    void push(const Node &u)
+    {
+        heap.push_back(u);
+        push_heap(heap.begin(), heap.end(), greater<Node>());
+
+    }
+    void replace_or_push(const Node &u)
+    {
+        int h = u.hash();
+        for (int i=0; i< heap.size(); ++i) {
+            if (heap[i].hash() == h) {
+                if (heap[i] > u) {
+                    heap[i] = u;
+                    while (i>1 && heap[(i-1)/2] > heap[i]) {
+                        swap(heap[i], heap[(i-1)/2]);
+                        i = (i-1)/2;
+                    }
+                }
+                return;
+            }
+        }
+        push(u);
+    }
+    unsigned size() const
+    {
+        return heap.size();
+    }
+    Node top() const
+    {
+        return heap[0];
+    }
+    void pop()
+    {
+        pop_heap(heap.begin(), heap.end(), greater<Node>());
+        heap.pop_back();
+    }
+    bool empty() const
+    {
+        return heap.empty();
+    }
+};
+
 // ---------- global variables ---------- //
 
 bool initialized = false;
+Info info;
+map<int, int> db;
 
 // ---------- helper functions ---------- //
 
@@ -157,6 +213,7 @@ bool initialized = false;
 void init()
 {
     initialized = true;
+    gen_db();
 }
 
 bool check_input(const char *str)
@@ -193,9 +250,9 @@ bool check_input(const char *str)
     }
 
     // check the goal is reachable
-    int parity = 0;
     // only 8-puzzle
     if (nums[8]) {
+        int parity = 0;
         for (int i=0; i<9; ++i)
             for (int j=i+1; j<9; ++j) {
                 if (str[i] != '0' && str[j] != '0' && str[j] < str[i])
@@ -268,6 +325,7 @@ int heuristic_manhattan(const int st[])
     return h;
 }
 
+// store exact distances up to MAX_DATABASE
 int heuristic_database(const int st[])
 {
     return 0;
@@ -290,15 +348,22 @@ void proj1(const char *source, int algo, int heuristic, std::vector<int> *sol)
             h = heuristic_misplace;
         } else if (heuristic == 2) {
             h = heuristic_manhattan;
+        } else if (heuristic == 3) {
+            h = heuristic_database;
         } else {
             h = heuristic_test;
         }
+
+        info.node_expanded = 0;
+        info.space_complexity = 0;
         if (algo == 1) {
-            *sol = A_star_search(source, h, false);
-        } else if (algo == 2) {
             *sol = IDS(source);
-        } else {
+        } else if (algo == 2) {
+            *sol = A_star_search(source, h, false);
+        } else if (algo == 3) {
             *sol = A_star_search(source, h, true);
+        } else {
+            sol-> clear();
         }
     } else {
         sol->clear();
@@ -317,8 +382,10 @@ vector<int> IDS(const char *source)
         stk.push(s);
 
         while (!stk.empty()) {
+            info.space_complexity = max(info.space_complexity, (unsigned)stk.size());
             Node nd = stk.top();
             stk.pop();
+            ++info.node_expanded;
 
             // contruct path
             while (nd.g && nd.g <= path.size()) {
@@ -352,7 +419,7 @@ vector<int> IDS(const char *source)
 
 vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
 {
-    priority_queue<Node, vector<Node>, greater<Node> > frontier;
+    Frontier frontier;
     set<Move> explored;
 
     Node s(source);
@@ -362,8 +429,11 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
     int seq = 0;  // sequence number for tree search
 
     while (!frontier.empty()) {
+        info.space_complexity = max(info.space_complexity, frontier.size());
         // extract a node with minimal f value
         Node nd = frontier.top();
+        frontier.pop();
+        ++info.node_expanded;
 
         if (nd.goal_test()) {
             // construct the path
@@ -382,7 +452,6 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
             return path;
         }
 
-        frontier.pop();
         // generate successors
         if (explored.find(nd.move) == explored.end()) {
             explored.insert(nd.move);
@@ -396,7 +465,11 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
                 if (tree || explored.find(it->move) == explored.end()) {
                     it->g = nd.g + 1;
                     it->f = nd.g + h(it->board);
-                    frontier.push(*it);
+                    if (tree) {
+                        frontier.push(*it);
+                    } else {
+                        frontier.replace_or_push(*it);
+                    }
                 }
             }
         }

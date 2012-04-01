@@ -19,6 +19,27 @@ void proj1(const char *, int, int, std::vector<int> *);
 vector<int> A_star_search(const char *, int (*)(const int[]), bool);
 vector<int> IDS(const char *);
 
+struct Info {
+    unsigned node_expanded;
+    unsigned space_complexity;
+};
+
+extern Info info;
+
+// ---------- constants ---------- //
+const int MAX_CONFS = 1000000000;
+const int MAX_PUZZLES = 8;
+const char *PUZZLES[MAX_PUZZLES] = {
+    "000000001",
+    "000000012",
+    "000000123",
+    "000001234",
+    "000012345",
+    "000123456",
+    "001234567",
+    "012345678",
+};
+
 // ---------- help functions ---------- //
 
 int compare (const void *a, const void *b)
@@ -34,16 +55,18 @@ int main()
     bool debug = true;
 
     printf("-- Initializing --\n");
+    init();
 
-    printf("-- Testing heuristic functions --\n");
+    printf("-- Checking heuristic functions --\n");
+
 
 #if FORCE_CHECK
     // ---------- check passed at 3/31 9:00 AM ---------- //
-    printf("-- Testing invalid inputs --\n");
-    for (int i=0; i<1000000000; ++i) {
+    printf("-- Checking invalid inputs --\n");
+    for (int i=0; i<MAX_CONFS; ++i) {
         // print progress
-        if (i%100000000 == 0) {
-            printf("check #%d\n", i/100000000);
+        if (i%(MAX_CONFS/10) == 0) {
+            printf("check #%d\n", i/(MAX_CONFS/10));
         }
         // generate input
         char str[] = "0000000000", str2[] = "0000000000";
@@ -52,40 +75,66 @@ int main()
             k /= 10;
         }
         // brute force check
-        const char *str_ckt[] = {
-            "000000001",
-            "000000012",
-            "000000123",
-            "000001234",
-            "000012345",
-            "000123456",
-            "001234567",
-            "012345678",
-        };
-        bool ck = check_input(str), ck_ans;
+        bool ck = check_input(str), ck_ans = false;
         qsort(str, 10, sizeof(char), compare);
-        ck_ans = !(strcmp(str, "012345678") != 0 &&
-                strcmp(str, "001234567") != 0 &&
-                strcmp(str, "000123456") != 0 &&
-                strcmp(str, "000012345") != 0 &&
-                strcmp(str, "000001234") != 0 &&
-                strcmp(str, "000000123") != 0 &&
-                strcmp(str, "000000012") != 0 &&
-                strcmp(str, "000000001") != 0);
+        for (int j=0; j<MAX_PUZZLES; ++j) {
+            if (strcmp(str, PUZZLES[j]) == 0) {
+                ck_ans = true;
+                break;
+            }
+        }
         if (ck_ans != ck) {
                 printf("check #%d failed: %s\n", i, str2);
         }
     }
 #endif
 
+#if 0
+    printf("-- Checking correctness of algorithms --\n");
+    for (int i=0; i<MAX_CONFS; ++i) {
+        // print progress
+        if (i%(MAX_CONFS/10) == 0) {
+            printf("check #%d\n", i/(MAX_CONFS/10));
+        }
+        // generate input
+        char str[] = "0000000000", str2[] = "0000000000";
+        for (int j=0, k=i; k; ++j) {
+            str2[j] = (str[j] += k%10);
+            k /= 10;
+        }
+        // brute force check
+        /*
+        bool ck = check_input(str), ck_ans = false;
+        qsort(str, 10, sizeof(char), compare);
+        for (int j=0; j<MAX_PUZZLES; ++j) {
+            if (strcmp(str, PUZZLES[j]) == 0) {
+                ck_ans = true;
+                break;
+            }
+        }
+        if (ck_ans != ck) {
+                printf("check #%d failed: %s\n", i, str2);
+        }
+        */
+    }
+#endif
 
+    printf("-- Checking unreachable states --\n");
+
+    printf("-- Generating statistics --\n");
+
+
+
+
+
+    // test
     printf("Easy input...\n");
     printf("---\n125\n034\n678\n---\n");
     for (int i=1; i<=3; ++i)
         for (int j=1; j<=2; ++j) {
             proj1("125304678", i, j, &sol);
             printf("------------------\n"
-                    "Path length: %u\n"
+                    "Path length: %zu\n"
                     "-----------------\n", sol.size());
             for (vector<int>::iterator it = sol.begin();
                     it != sol.end(); ++it) {
@@ -108,20 +157,6 @@ int main()
                 printf("step: %d -> %c\n", step / 10, di);
             }
         }
-
-    printf("Invalid input...\n");
-
-    proj1("021345678", 0, 0, &sol);
-    if (sol.empty())
-        printf("check passed\n");
-    else
-        printf("check failed 021345678\n");
-
-    proj1("011145678", 0, 0, &sol);
-    if (sol.empty())
-        printf("check passed\n");
-    else
-        printf("check failed 011145678\n");
 
     return 0;
 }
