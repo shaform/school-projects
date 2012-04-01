@@ -403,7 +403,21 @@ int heuristic_database(const int st[])
         }
     }
     Node t(part);
-    return db[t.move.curr];
+    map<int, int>::iterator it = db.find(t.move.curr);
+
+#ifndef FORCE_CHECK
+    // this should never happen
+    if (it == db.end()) {
+        char str[10];
+        for (int i=0; i<9; ++i) {
+            str[i] = part[i]-'0';
+        }
+        str[9] = '\0';
+        return IDS(str).size();
+    }
+#endif
+
+    return it->second;
 }
 
 // ---------- search functions ---------- //
