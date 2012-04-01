@@ -22,7 +22,7 @@ vector<int> A_star_search(const char *, int (*)(const int[]), bool);
 vector<int> IDS(const char *);
 
 struct Info {
-    unsigned node_expanded;
+    unsigned long long node_expanded;
     unsigned space_complexity;
 };
 
@@ -78,6 +78,27 @@ bool check_solution(const char source[], vector<int> steps, const char dest[])
         }
     }
     return strcmp(str, dest) == 0;
+}
+
+void generate_output(int alg, int h, int sz)
+{
+    char fname[50];
+    sprintf(fname, "alg%d_h%d_%d.txt", alg, h, sz);
+    FILE *out = fopen(fname, "w+");
+    fprintf(out, "--- statistics for alg: %d h: %d size: %d ---\n"
+            "/--node expanded--/--space complexity--/\n", alg, h, sz);
+
+    vector<int> vec;
+    char str[10];
+    memcpy(str, PUZZLES[sz-1], sizeof(str));
+    do {
+        if (check_input(str)) {
+            proj1(str, alg, h, &vec);
+            fprintf(out, "%llu      %u\n", info.node_expanded, info.space_complexity);
+        }
+    } while (next_permutation(str, str+9));
+
+    fclose(out);
 }
 
 // ---------- main ---------- //
@@ -232,7 +253,7 @@ int main()
     }
 #endif
 
-#if 1
+#ifdef FORCE_CHECK
     printf("-- Checking correctness of algorithms --\n");
     {
         const int RANDOM_LIMIT = 4;
@@ -303,5 +324,35 @@ int main()
     }
 #endif
     printf("-- Generating statistics --\n");
+    printf("\n[!!Warning!!] this may take hours or even days!!\n\n");
+    printf("enter 3 integers to choose what to generate:\n"
+            "(1) algorithm: 1 - IDS, 2 - A* graph, 3 - A* tree\n"
+            "(2) heuristic: 1 - misplace, 2 - manhattan, 3 - database\n"
+            "(3) size: 1~8\n"
+            "\nenter zero(s) to generate all algs or hs or sizes\n");
+    {
+        int alg, h, sz;
+        scanf("%d %d %d", &alg, &h, &sz);
+        if (sz < 0 || sz > 8) {
+            sz = 1;
+        }
+        for (int i=1; i<=3; ++i) {
+            if (alg) i = alg;
+            for (int j=1; j<=3; ++j) {
+                if (h) j = h;
+                for (int k=1; k<=8; ++k) {
+                    if (sz) k = sz;
+                    printf("-- Generating for %d/%d/%d --\n", i, j, k);
+                    generate_output(i, j, k);
+                    if (sz) break;
+                }
+                if (i==1) break; // no heuristic for IDS
+                if (h) break;
+            }
+            if (alg) break;
+        }
+    }
+
+
     return 0;
 }

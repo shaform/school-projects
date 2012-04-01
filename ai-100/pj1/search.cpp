@@ -26,7 +26,7 @@ vector<int> A_star_search(const char *, int (*)(const int[]), bool);
 vector<int> IDS(const char *);
 
 struct Info {
-    unsigned node_expanded;
+    unsigned long long node_expanded;
     unsigned space_complexity;
 };
 
