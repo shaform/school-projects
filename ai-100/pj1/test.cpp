@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <vector>
 #include <algorithm>
 
@@ -38,9 +39,45 @@ const int MAX_CONFS = 1000000000;
 
 // ---------- help functions ---------- //
 
-int compare (const void *a, const void *b)
+int compare(const void *a, const void *b)
 {
       return (*(char*)a - *(char*)b);
+}
+
+void shuffle(char str[], int sz)
+{
+    for (int i=sz-1; i>0; --i) {
+        int j = rand() % (i+1);
+        swap(str[i], str[j]);
+    }
+}
+
+bool check_solution(const char source[], vector<int> steps, const char dest[])
+{
+    char str[10];
+    memcpy(str, source, sizeof(str));
+    for (vector<int>::iterator it=steps.begin();
+            it != steps.end(); ++it) {
+        int u = *it / 10;
+        int di = *it % 10;
+        // L-D-R-U 1-2-3-4
+        // assuming no errors, or memory error would happen
+        for (int i=0; i<9; ++i) {
+            if (str[i] == u+'0') {
+                if (di == 1) {
+                    swap(str[i], str[i-1]);
+                } else if (di == 2) {
+                    swap(str[i], str[i+3]);
+                } else if (di == 3) {
+                    swap(str[i], str[i+1]);
+                } else {
+                    swap(str[i], str[i-3]);
+                }
+                break;
+            }
+        }
+    }
+    return strcmp(str, dest) == 0;
 }
 
 // ---------- main ---------- //
@@ -53,7 +90,7 @@ int main()
     printf("-- Initializing --\n");
     init();
 
-#if FORCE_CHECK
+#ifdef FORCE_CHECK
     // ---------- check passed at 4/1 5:10 PM ---------- //
     printf("-- Checking heuristic functions --\n");
     for (int i=0; i<MAX_PUZZLES; ++i) {
@@ -121,7 +158,7 @@ int main()
     }
 #endif
 
-#if FORCE_CHECK
+#ifdef FORCE_CHECK
     // ---------- check passed at 4/1 2:30 PM ---------- //
     printf("-- Checking invalid inputs --\n");
     for (int i=0; i<MAX_CONFS; ++i) {
@@ -158,74 +195,113 @@ int main()
     }
 #endif
 
-#if 0
-    printf("-- Checking correctness of algorithms --\n");
-    for (int i=0; i<MAX_CONFS; ++i) {
-        // print progress
-        if (i%(MAX_CONFS/10) == 0) {
-            printf("check #%d\n", i/(MAX_CONFS/10));
-        }
-        // generate input
-        char str[] = "0000000000", str2[] = "0000000000";
-        for (int j=0, k=i; k; ++j) {
-            str2[j] = (str[j] += k%10);
-            k /= 10;
-        }
+#ifdef FORCE_CHECK
+    // ---------- check passed at 4/1 7:33 PM ---------- //
+    printf("-- Checking unreachable states --\n");
+    {
+        char str[10];
+        memcpy(str, PUZZLES[7], sizeof(str));
+
         // brute force check
-        /*
-        bool ck = check_input(str), ck_ans = false;
-        qsort(str, 10, sizeof(char), compare);
-        for (int j=0; j<MAX_PUZZLES; ++j) {
-            if (strcmp(str, PUZZLES[j]) == 0) {
-                ck_ans = true;
-                break;
+        int count = 0;
+        int reachable = 0, unreachable = 0;
+        while (next_permutation(str, str+9)) {
+            // print progress
+            if (++count % 1000 == 0) {
+                printf("check #%d / %d\n", count / 1000, 362880 / 1000);
+            }
+            if (check_input(str)) {
+                ++reachable;
+                if (A_star_search(str, heuristic_manhattan, false).size() == 0) {
+                    printf("check failed: %s, expect: unreachable, actual: reachable\n", str);
+                }
+            } else {
+                ++unreachable;
+                // it exhausts all memory, cannot actually test
+                /*
+                if (A_star_search(str, heuristic_database, false).size() != 0) {
+                    printf("check failed: %s, expect: reachable, actual: unreachable\n", str);
+                }
+                */
             }
         }
-        if (ck_ans != ck) {
-                printf("check #%d failed: %s\n", i, str2);
+        if (reachable+1 != unreachable) {
+            printf("check failed, number should equal: unreachable: %d, reachable: %d\n",
+                    unreachable, reachable+1);
         }
-        */
     }
 #endif
 
-    printf("-- Checking unreachable states --\n");
-
-    printf("-- Generating statistics --\n");
-
-
-
-
-
-    // test
-    printf("Easy input...\n");
-    printf("---\n125\n034\n678\n---\n");
-    for (int i=1; i<=3; ++i)
-        for (int j=1; j<=2; ++j) {
-            proj1("125304678", i, j, &sol);
-            printf("------------------\n"
-                    "Path length: %zu\n"
-                    "-----------------\n", sol.size());
-            for (vector<int>::iterator it = sol.begin();
-                    it != sol.end(); ++it) {
-                int step = *it;
-                char di;
-                switch (step % 10) {
-                    case 1:
-                        di = '<';
-                        break;
-                    case 2:
-                        di = 'v';
-                        break;
-                    case 3:
-                        di = '>';
-                        break;
-                    case 4:
-                        di = '^';
-                        break;
+#if 1
+    printf("-- Checking correctness of algorithms --\n");
+    {
+        const int RANDOM_LIMIT = 4;
+        const int CHECK_NUM = 500;
+        for (int i=0; i<RANDOM_LIMIT; ++i) {
+            // print progress
+            printf("check #%d\n", i+1);
+            char str[10];
+            memcpy(str, PUZZLES[i], sizeof(str));
+            do {
+                int curr;
+                vector<int> vec;
+                proj1(str, 1, 0, &vec);
+                if (vec.size() == 0) {
+                    if ((check_input(str) && strcmp(str, PUZZLES[i]) != 0)) {
+                        printf("check failed at IDS: %s\n", str);
+                    }
+                } else if (!check_solution(str, vec, PUZZLES[i])) {
+                    printf("check failed at IDS: %s\n", str);
                 }
-                printf("step: %d -> %c\n", step / 10, di);
-            }
+                curr = vec.size();
+                for (int j=1; j<=3; ++j) {
+                    for (int k=2; k<=3; ++k) {
+                        proj1(str, k, j, &vec);
+                        if (!check_solution(str, vec, PUZZLES[i]) ||
+                                vec.size() != curr) {
+                            printf("check failed at A*(%d), h%d(): %s\n", k, j, str);
+                        }
+                    }
+                }
+            } while (next_permutation(str, str+9));
         }
 
+        // initialize random seed
+        srand(time(NULL));
+        for (int i=RANDOM_LIMIT; i<MAX_CONFS; ++i) {
+            char str[10];
+            memcpy(str, PUZZLES[i], sizeof(str));
+            int count = 0;
+            while (++count <= CHECK_NUM) {
+                // print progress
+                if (count % (CHECK_NUM / 10) == 0) {
+                    printf("check #%d-%d\n", i+1, count / (CHECK_NUM / 10));
+                }
+                int curr;
+                vector<int> vec;
+                proj1(str, 1, 0, &vec);
+                if (vec.size() == 0) {
+                    if ((check_input(str) && strcmp(str, PUZZLES[i]) != 0)) {
+                        printf("check failed at IDS: %s\n", str);
+                    }
+                } else if (!check_solution(str, vec, PUZZLES[i])) {
+                    printf("check failed at IDS: %s\n", str);
+                }
+                curr = vec.size();
+                for (int j=1; j<=3; ++j) {
+                    for (int k=2; k<=3; ++k) {
+                        proj1(str, k, j, &vec);
+                        if (!check_solution(str, vec, PUZZLES[i]) ||
+                                vec.size() != curr) {
+                            printf("check failed at A*(%d), h%d(): %s\n", k, j, str);
+                        }
+                    }
+                }
+                shuffle(str, 9);
+            }
+        }
+    }
+#endif
+    printf("-- Generating statistics --\n");
     return 0;
 }

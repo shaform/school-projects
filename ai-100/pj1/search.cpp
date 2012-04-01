@@ -536,6 +536,7 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
                 if (tree) {
                     mv.id = mv.pvid;
                 }
+                // find the parent
                 mv = *explored.find(mv);
             }
 
@@ -565,4 +566,7 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
             }
         }
     }
+
+    // no solution
+    return vector<int>();
 }
