@@ -1,3 +1,7 @@
+// --------------------------------------------------------- //
+// ** 1~8 puzzles solving program **
+// --------------------------------------------------------- //
+
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -12,6 +16,9 @@
 using namespace std;
 
 // ---------- header ---------- //
+// Because no header file is allowed, we put the header here
+// If you change anything here, you should change
+// the header section in another file also.
 
 void init();
 bool check_input(const char*);
@@ -51,7 +58,7 @@ const char *PUZZLES[MAX_PUZZLES] = {
 };
 
 const int MAX_MOVES = 24;
-// The positions to be exchanged
+// the positions to be exchanged
 const int NEXT_MOVE[MAX_MOVES][2] = {
     {0, 1}, {1, 2},
     {3, 4}, {4, 5},
@@ -67,7 +74,7 @@ const int NEXT_MOVE[MAX_MOVES][2] = {
     {4, 1}, {7, 4},
     {5, 2}, {8, 5},
 };
-// The directions of each exchange:
+// the directions of each exchange:
 // L-D-R-U 1-2-3-4
 const int NEXT_DI[MAX_MOVES] = {
     3, 3, 3, 3, 3, 3,

@@ -1,3 +1,45 @@
+// --------------------------------------------------------- //
+// ** 1~8 puzzles testing and experimentation program **
+//
+// !!
+//    Notice this program takes a long time to run and
+//    uses a lot of memory. Some machines may not be
+//    able to run it.
+// !!
+//
+// This program contains two parts:
+//
+// 1) Testing routines used to test the correctness of
+//    the solving program.
+//
+//    These tests are commented out since they have been
+//    performed during development.
+//
+//    To force the checks, compile the program with
+//    `FORCE_CHECK' defined.
+//
+//    Notice some checks may take extremely long time to run,
+//    since all checks are done by brute force.
+//
+// 2) Statistics generating routines.
+//    
+//    Files contianing raw data would be generated under
+//    the directory.
+//
+//    sol1.txt ~ sol8.txt contains the optimal depth of
+//    configurations in n-puzzle game.
+//
+//    algi_hj_k.txt contains the time / space complexity
+//    of configurations for algorithm i with heuristic j
+//    in k-puzzle game. (j has no meaning for IDS)
+//
+//    Notice this still takes a long time to run, and
+//    A* tree search uses a lot of memory.
+//
+//    Some machines may not be able to run A* tree search.
+//
+// --------------------------------------------------------- //
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -8,6 +50,9 @@
 using namespace std;
 
 // ---------- header ---------- //
+// Because no header file is allowed, we put the header here
+// If you change anything here, you should change
+// the header section in another file also.
 
 void init();
 bool check_input(const char*);
@@ -44,6 +89,7 @@ int compare(const void *a, const void *b)
       return (*(char*)a - *(char*)b);
 }
 
+// randomly shuffle the string
 void shuffle(char str[], int sz)
 {
     for (int i=sz-1; i>0; --i) {
@@ -52,6 +98,7 @@ void shuffle(char str[], int sz)
     }
 }
 
+// check if the solution is correct
 bool check_solution(const char source[], vector<int> steps, const char dest[])
 {
     char str[10];
@@ -61,16 +108,19 @@ bool check_solution(const char source[], vector<int> steps, const char dest[])
         int u = *it / 10;
         int di = *it % 10;
         // L-D-R-U 1-2-3-4
-        // assuming no errors, or memory error would happen
         for (int i=0; i<9; ++i) {
             if (str[i] == u+'0') {
                 if (di == 1) {
+                    if (i % 3 == 0) return false;  // check if possible to move
                     swap(str[i], str[i-1]);
                 } else if (di == 2) {
+                    if (i >= 6) return false;  // check if possible to move
                     swap(str[i], str[i+3]);
                 } else if (di == 3) {
+                    if (i % 3 == 2) return false;  // check if possible to move
                     swap(str[i], str[i+1]);
                 } else {
+                    if (i <= 2) return false;  // check if possible to move
                     swap(str[i], str[i-3]);
                 }
                 break;
@@ -80,6 +130,8 @@ bool check_solution(const char source[], vector<int> steps, const char dest[])
     return strcmp(str, dest) == 0;
 }
 
+// generat raw statistics
+// if sol_stat is true, generate optimal search depth of puzzles
 double generate_output(int alg, int h, int sz, bool sol_stat)
 {
     unsigned opt_depth = 0, opt_num = 0;
@@ -116,7 +168,7 @@ double generate_output(int alg, int h, int sz, bool sol_stat)
     fclose(out);
 
     if (opt_num) {
-        return ((double) opt_depth)/opt_num;
+        return ((double) opt_depth)/opt_num;  // return average of depth
     } else {
         return 0;
     }
@@ -126,11 +178,14 @@ double generate_output(int alg, int h, int sz, bool sol_stat)
 
 int main()
 {
-    vector<int> sol;
-    bool debug = true;
-
     printf("-- Initializing --\n");
+    // If we omit this, it still gets called when
+    // proj1 is called for the first time.
     init();
+
+    // ------------------------------ //
+    // Part I: Correctness Checking   //
+    // ------------------------------ //
 
 #ifdef FORCE_CHECK
     // ---------- check passed at 4/1 5:10 PM ---------- //
@@ -275,8 +330,11 @@ int main()
 #endif
 
 #ifdef FORCE_CHECK
+    // notice: this takes days to run!!
     printf("-- Checking correctness of algorithms --\n");
     {
+        // It seems impossible to check all configurations
+        // so we use random inputs for higher order puzzles.
         const int RANDOM_LIMIT = 4;
         const int CHECK_NUM = 500;
         for (int i=0; i<RANDOM_LIMIT; ++i) {
@@ -345,6 +403,9 @@ int main()
     }
 #endif
 
+    // ------------------------------ //
+    // Part II: Generating Statistics //
+    // ------------------------------ //
 
     printf("-- Generating solution statistics --\n");
     printf("***************************************************\n"
