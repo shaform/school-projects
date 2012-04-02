@@ -34,7 +34,7 @@ vector<int> IDS(const char *);
 
 struct Info {
     unsigned long long node_expanded;
-    unsigned space_complexity;
+    unsigned long long space_complexity;
 };
 
 extern Info info;
@@ -43,6 +43,9 @@ const int MAX_PUZZLES = 8;
 extern const char *PUZZLES[MAX_PUZZLES];
 
 const int MAX_DATABASE = 6;
+
+const int MAX_MOVES = 24;
+extern const int NEXT_MOVE[MAX_MOVES][2];
 
 // ---------- constants ---------- //
 
@@ -57,7 +60,6 @@ const char *PUZZLES[MAX_PUZZLES] = {
     "012345678",
 };
 
-const int MAX_MOVES = 24;
 // the positions to be exchanged
 const int NEXT_MOVE[MAX_MOVES][2] = {
     {0, 1}, {1, 2},
@@ -89,8 +91,8 @@ struct Move {
     int prev;  // hash of previous state
     int curr;  // hash of current state
     int move;  // move to get to current state
-    int id;  // used in tree search to distinguish nodes
-    int pvid;  // used in tree search to distinguish nodes
+    unsigned long long id;  // used in tree search to distinguish nodes
+    unsigned long long pvid;  // used in tree search to distinguish nodes
 
     Move(int n) : curr(n), prev(0), move(0), id(0), pvid(0) {}
     Move() : prev(0), curr(0), move(0), id(0), pvid(0) {}
@@ -215,7 +217,7 @@ struct Frontier {
             }
         }
     }
-    unsigned size() const
+    unsigned long long size() const
     {
         return heap.size();
     }
@@ -486,7 +488,7 @@ vector<int> IDS(const char *source)
         stk.push(s);
 
         while (!stk.empty()) {
-            info.space_complexity = max(info.space_complexity, (unsigned)stk.size());
+            info.space_complexity = max(info.space_complexity, (unsigned long long) stk.size());
             Node nd = stk.top();
             stk.pop();
             ++info.node_expanded;
@@ -532,7 +534,7 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
 
     frontier.push(s);
 
-    int seq = 0;  // sequence number for tree search
+    unsigned long long seq = 0;  // sequence number for tree search
 
     while (!frontier.empty()) {
         info.space_complexity = max(info.space_complexity, frontier.size());
@@ -560,7 +562,7 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
         }
 
         // generate successors
-        if (explored.find(nd.move) == explored.end()) {
+        if (tree || explored.find(nd.move) == explored.end()) {
             explored.insert(nd.move);
             vector<Node> moves = nd.moves();
             for (vector<Node>::iterator it = moves.begin();

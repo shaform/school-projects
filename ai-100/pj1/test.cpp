@@ -68,7 +68,7 @@ vector<int> IDS(const char *);
 
 struct Info {
     unsigned long long node_expanded;
-    unsigned space_complexity;
+    unsigned long long space_complexity;
 };
 
 extern Info info;
@@ -77,6 +77,9 @@ const int MAX_PUZZLES = 8;
 extern const char *PUZZLES[MAX_PUZZLES];
 
 const int MAX_DATABASE = 6;
+
+const int MAX_MOVES = 24;
+extern const int NEXT_MOVE[MAX_MOVES][2];
 
 // ---------- constants ---------- //
 
@@ -132,7 +135,7 @@ bool check_solution(const char source[], vector<int> steps, const char dest[])
 
 // generat raw statistics
 // if sol_stat is true, generate optimal search depth of puzzles
-double generate_output(int alg, int h, int sz, bool sol_stat)
+double generate_output(int alg, int h, int sz, bool sol_stat, bool rd)
 {
     unsigned opt_depth = 0, opt_num = 0;
     char fname[50];
@@ -151,8 +154,9 @@ double generate_output(int alg, int h, int sz, bool sol_stat)
 
     vector<int> vec;
     char str[10];
+    int count = 100;
     memcpy(str, PUZZLES[sz-1], sizeof(str));
-    do {
+    while (true) {
         if (check_input(str)) {
             proj1(str, alg, h, &vec);
             if (sol_stat) {
@@ -160,10 +164,21 @@ double generate_output(int alg, int h, int sz, bool sol_stat)
                 opt_depth += vec.size();
                 ++opt_num;
             } else {
-                fprintf(out, "%llu      %u\n", info.node_expanded, info.space_complexity);
+                fprintf(out, "%llu      %llu\n", info.node_expanded, info.space_complexity);
             }
         }
-    } while (next_permutation(str, str+9));
+        if (rd) {
+            if (--count < 0) {
+                break;
+            } else {
+                shuffle(str, 9);
+            }
+        } else {
+            if (!next_permutation(str, str+9)) {
+                break;
+            }
+        }
+    }
 
     fclose(out);
 
@@ -408,6 +423,33 @@ int main()
     // Part II: Generating Statistics //
     // ------------------------------ //
 
+    extern const int NEXT_MOVE[MAX_MOVES][2];
+    printf("-- Generating branching factors --\n");
+    printf("do you want to generate? (y/n)\n");
+    if (getchar() == 'y') {
+        for (int i=1; i<=8; ++i) {
+            char str[10];
+            unsigned count = 0, num = 0, maxb = 0;
+            printf("-- Generating for size %d --\n", i);
+            memcpy(str, PUZZLES[i-1], sizeof(str));
+            do {
+                if (check_input(str)) {
+                    unsigned bf = 0;
+                    for (int j=0; j<MAX_MOVES; ++j) {
+                        int u = NEXT_MOVE[j][0], v = NEXT_MOVE[j][1];
+                        if (str[u] == '0' && str[v] != '0') {
+                            bf++;
+                        }
+                    }
+                    maxb = max(maxb, bf);
+                    count += bf;
+                    num++;
+                }
+            } while (next_permutation(str, str+9));
+            printf("average: %f, maximum: %u\n", ((double) count)/num, maxb);
+        }
+    }
+    getchar();  // discard '\n'
     printf("-- Generating solution statistics --\n");
     printf("***************************************************\n"
             "[!!Warning!!] this may take hours!!\n"
@@ -416,10 +458,11 @@ int main()
     if (getchar() == 'y') {
         for (int i=1; i<=8; ++i) {
             printf("-- Generating for size %d --\n", i);
-            double avg = generate_output(2, 2, i, true);
+            double avg = generate_output(2, 2, i, true, false);
             printf("average optimal depth: %f\n", avg);
         }
     }
+    getchar();  // discard '\n'
     printf("-- Generating statistics --\n");
     printf("***************************************************\n"
             "[!!Warning!!] this may take hours or even days!!\n"
@@ -427,13 +470,14 @@ int main()
             "[!!Warning!!] Check your memory limit first!!\n"
             "[!!Warning!!] By default, 0 doesn't include A* tree\n"
             "***************************************************\n\n");
-    printf("enter 3 integers to choose what to generate:\n"
+    printf("enter 4 integers to choose what to generate:\n"
             "(1) algorithm: 0 - all, 1 - IDS, 2 - A* graph, 3 - A* tree\n"
             "(2) heuristic: 0 - all, 1 - misplace, 2 - manhattan, 3 - database\n"
-            "(3) size: 0 - all, 1~8\n");
+            "(3) size: 0 - all, 1~8\n"
+            "(4) random?: 1 - yes, 0 no\n");
     {
-        int alg = 2, h = 2, sz = 1;
-        scanf("%d %d %d", &alg, &h, &sz);
+        int alg = 2, h = 2, sz = 1, rd = 1;
+        scanf("%d %d %d %d", &alg, &h, &sz, &rd);
         if (sz < 0 || sz > 8) {
             sz = 1;
         }
@@ -443,8 +487,9 @@ int main()
                 if (h) j = h;
                 for (int k=1; k<=8; ++k) {
                     if (sz) k = sz;
-                    printf("-- Generating for %d/%d/%d --\n", i, j, k);
-                    generate_output(i, j, k, false);
+                    printf("-- Generating for %d/%d/%d %s--\n",
+                            i, j, k, rd ? "random" : "all perms");
+                    generate_output(i, j, k, false, rd);
                     if (sz) break;
                 }
                 if (i==1) break; // no heuristic for IDS
