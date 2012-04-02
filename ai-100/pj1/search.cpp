@@ -401,12 +401,20 @@ int heuristic_manhattan(const int st[])
 // store exact distances up to MAX_DATABASE
 int heuristic_database(const int st[])
 {
+    // get maximum num
+    int maxn = 0;
+    for (int i=0; i<9; ++i) {
+        if (st[i] > maxn) {
+            maxn = st[i];
+        }
+    }
+    int diff = max(maxn - MAX_DATABASE, 0);
     int part[9];
     for (int i=0; i<9; ++i) {
-        if (st[i] > MAX_DATABASE) {
-            part[i] = 0;
+        if (st[i] > diff) {
+            part[i] = st[i]-diff;
         } else {
-            part[i] = st[i];
+            part[i] = 0;
         }
     }
     Node t(part);
