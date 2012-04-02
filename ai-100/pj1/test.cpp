@@ -80,13 +80,22 @@ bool check_solution(const char source[], vector<int> steps, const char dest[])
     return strcmp(str, dest) == 0;
 }
 
-void generate_output(int alg, int h, int sz)
+double generate_output(int alg, int h, int sz, bool sol_stat)
 {
+    unsigned opt_depth = 0, opt_num = 0;
     char fname[50];
-    sprintf(fname, "alg%d_h%d_%d.txt", alg, h, sz);
+    if (sol_stat) {
+        sprintf(fname, "sol%d.txt", sz);
+    } else {
+        sprintf(fname, "alg%d_h%d_%d.txt", alg, h, sz);
+    }
     FILE *out = fopen(fname, "w+");
-    fprintf(out, "--- statistics for alg: %d h: %d size: %d ---\n"
-            "/--node expanded--/--space complexity--/\n", alg, h, sz);
+    if (sol_stat) {
+        fprintf(out, "--- statistics for solution of size: %d ---\n", sz);
+    } else {
+        fprintf(out, "--- statistics for alg: %d h: %d size: %d ---\n"
+                "/--node expanded--/--space complexity--/\n", alg, h, sz);
+    }
 
     vector<int> vec;
     char str[10];
@@ -94,11 +103,23 @@ void generate_output(int alg, int h, int sz)
     do {
         if (check_input(str)) {
             proj1(str, alg, h, &vec);
-            fprintf(out, "%llu      %u\n", info.node_expanded, info.space_complexity);
+            if (sol_stat) {
+                fprintf(out, "%u\n", (unsigned) vec.size());
+                opt_depth += vec.size();
+                ++opt_num;
+            } else {
+                fprintf(out, "%llu      %u\n", info.node_expanded, info.space_complexity);
+            }
         }
     } while (next_permutation(str, str+9));
 
     fclose(out);
+
+    if (opt_num) {
+        return ((double) opt_depth)/opt_num;
+    } else {
+        return 0;
+    }
 }
 
 // ---------- main ---------- //
@@ -323,15 +344,32 @@ int main()
         }
     }
 #endif
+
+
+    printf("-- Generating solution statistics --\n");
+    printf("***************************************************\n"
+            "[!!Warning!!] this may take hours!!\n"
+            "***************************************************\n\n");
+    printf("do you want to generate? (y/n)\n");
+    if (getchar() == 'y') {
+        for (int i=1; i<=8; ++i) {
+            printf("-- Generating for size %d --\n", i);
+            double avg = generate_output(2, 2, i, true);
+            printf("average optimal depth: %f\n", avg);
+        }
+    }
     printf("-- Generating statistics --\n");
-    printf("\n[!!Warning!!] this may take hours or even days!!\n\n");
+    printf("***************************************************\n"
+            "[!!Warning!!] this may take hours or even days!!\n"
+            "[!!Warning!!] A* tree may exhaust all your memory!\n"
+            "[!!Warning!!] Check your memory limit first!!\n"
+            "***************************************************\n\n");
     printf("enter 3 integers to choose what to generate:\n"
-            "(1) algorithm: 1 - IDS, 2 - A* graph, 3 - A* tree\n"
-            "(2) heuristic: 1 - misplace, 2 - manhattan, 3 - database\n"
-            "(3) size: 1~8\n"
-            "\nenter zero(s) to generate all algs or hs or sizes\n");
+            "(1) algorithm: 0 - all, 1 - IDS, 2 - A* graph, 3 - A* tree\n"
+            "(2) heuristic: 0 - all, 1 - misplace, 2 - manhattan, 3 - database\n"
+            "(3) size: 0 - all, 1~8\n");
     {
-        int alg, h, sz;
+        int alg = 2, h = 2, sz = 1;
         scanf("%d %d %d", &alg, &h, &sz);
         if (sz < 0 || sz > 8) {
             sz = 1;
@@ -343,7 +381,7 @@ int main()
                 for (int k=1; k<=8; ++k) {
                     if (sz) k = sz;
                     printf("-- Generating for %d/%d/%d --\n", i, j, k);
-                    generate_output(i, j, k);
+                    generate_output(i, j, k, false);
                     if (sz) break;
                 }
                 if (i==1) break; // no heuristic for IDS
