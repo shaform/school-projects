@@ -331,12 +331,13 @@ int main()
 
 #ifdef FORCE_CHECK
     // notice: this takes days to run!!
+    // notice: A* tree can exhaust all memory!
     printf("-- Checking correctness of algorithms --\n");
     {
         // It seems impossible to check all configurations
         // so we use random inputs for higher order puzzles.
-        const int RANDOM_LIMIT = 4;
-        const int CHECK_NUM = 500;
+        const int RANDOM_LIMIT = 2;
+        const int CHECK_NUM = 50;
         for (int i=0; i<RANDOM_LIMIT; ++i) {
             // print progress
             printf("check #%d\n", i+1);
@@ -424,6 +425,7 @@ int main()
             "[!!Warning!!] this may take hours or even days!!\n"
             "[!!Warning!!] A* tree may exhaust all your memory!\n"
             "[!!Warning!!] Check your memory limit first!!\n"
+            "[!!Warning!!] By default, 0 doesn't include A* tree\n"
             "***************************************************\n\n");
     printf("enter 3 integers to choose what to generate:\n"
             "(1) algorithm: 0 - all, 1 - IDS, 2 - A* graph, 3 - A* tree\n"
@@ -435,7 +437,7 @@ int main()
         if (sz < 0 || sz > 8) {
             sz = 1;
         }
-        for (int i=1; i<=3; ++i) {
+        for (int i=1; i<=2; ++i) {
             if (alg) i = alg;
             for (int j=1; j<=3; ++j) {
                 if (h) j = h;
