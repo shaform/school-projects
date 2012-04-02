@@ -188,7 +188,7 @@ int main()
     // ------------------------------ //
 
 #ifdef FORCE_CHECK
-    // ---------- check passed at 4/1 5:10 PM ---------- //
+    // ---------- check passed at 4/2 1:40 PM ---------- //
     printf("-- Checking heuristic functions --\n");
     for (int i=0; i<MAX_PUZZLES; ++i) {
         printf("check #%d\n", i+1);
