@@ -94,7 +94,7 @@ struct Move {
     unsigned long long id;  // used in tree search to distinguish nodes
     unsigned long long pvid;  // used in tree search to distinguish nodes
 
-    Move(int n) : curr(n), prev(0), move(0), id(0), pvid(0) {}
+    Move(int n) : prev(0), curr(n), move(0), id(0), pvid(0) {}
     Move() : prev(0), curr(0), move(0), id(0), pvid(0) {}
 
     bool operator<(const Move &rhs) const
@@ -194,8 +194,7 @@ struct Frontier {
     {
         inserted.insert(u.hash());
         heap.push_back(u);
-        push_heap(heap.begin(), heap.end(), greater<Node>());
-
+        decrease_key(heap.size()-1);
     }
     void replace_or_push(const Node &u)
     {
@@ -204,16 +203,39 @@ struct Frontier {
             push(u);
             return;
         }
-        for (int i=0; i< heap.size(); ++i) {
+        for (unsigned i=0; i<heap.size(); ++i) {
             if (heap[i].hash() == h) {
                 if (heap[i] > u) {
                     heap[i] = u;
-                    while (i>1 && heap[(i-1)/2] > heap[i]) {
-                        swap(heap[i], heap[(i-1)/2]);
-                        i = (i-1)/2;
-                    }
+                    decrease_key(i);
                 }
                 return;
+            }
+        }
+    }
+    void decrease_key(int u)
+    {
+        while (u>1 && heap[(u-1)/2] > heap[u]) {
+            swap(heap[u], heap[(u-1)/2]);
+            u = (u-1)/2;
+        }
+    }
+    void heapify(int u, int size)
+    {
+        while (true) {
+            int l = u*2+1, r = u*2+2;
+            int mini = u;
+
+            if (l < size && heap[l] < heap[mini])
+                mini = l;
+            if (r < size && heap[r] < heap[mini])
+                mini = r;
+
+            if (mini != u) {
+                swap(heap[u], heap[mini]);
+                u = mini;
+            } else {
+                break;
             }
         }
     }
@@ -228,8 +250,9 @@ struct Frontier {
     void pop()
     {
         inserted.erase(heap[0].hash());
-        pop_heap(heap.begin(), heap.end(), greater<Node>());
+        heap[0] = heap[heap.size()-1];
         heap.pop_back();
+        heapify(0, heap.size());
     }
     bool empty() const
     {

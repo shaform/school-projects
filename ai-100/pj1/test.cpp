@@ -138,6 +138,7 @@ bool check_solution(const char source[], vector<int> steps, const char dest[])
 double generate_output(int alg, int h, int sz, bool sol_stat, bool rd)
 {
     unsigned opt_depth = 0, opt_num = 0;
+    // unsigned max_depth = 0;
     char fname[50];
     if (sol_stat) {
         sprintf(fname, "sol%d.txt", sz);
@@ -162,6 +163,12 @@ double generate_output(int alg, int h, int sz, bool sol_stat, bool rd)
             if (sol_stat) {
                 fprintf(out, "%u\n", (unsigned) vec.size());
                 opt_depth += vec.size();
+                /*
+                if (vec.size() > max_depth) {
+                    printf("%lu depth: %s\n", vec.size(), str);
+                    max_depth = vec.size();
+                }
+                */
                 ++opt_num;
             } else {
                 fprintf(out, "%llu      %llu\n", info.node_expanded, info.space_complexity);
