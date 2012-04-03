@@ -574,7 +574,7 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
                 }
                 if (tree || explored.find(it->move) == explored.end()) {
                     it->g = nd.g + 1;
-                    it->f = nd.g + h(it->board);
+                    it->f = it->g + h(it->board);
                     if (tree) {
                         frontier.push(*it);
                     } else {
