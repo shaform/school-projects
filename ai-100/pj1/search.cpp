@@ -91,32 +91,31 @@ struct Move {
     int prev;  // hash of previous state
     int curr;  // hash of current state
     int move;  // move to get to current state
-    unsigned long long id;  // used in tree search to distinguish nodes
-    unsigned long long pvid;  // used in tree search to distinguish nodes
+    int g;
 
-    Move(int n) : prev(0), curr(n), move(0), id(0), pvid(0) {}
-    Move() : prev(0), curr(0), move(0), id(0), pvid(0) {}
+    Move(int n) : prev(0), curr(n), move(0), g(0) {}
+    Move() : prev(0), curr(0), move(0), g(0) {}
 
     bool operator<(const Move &rhs) const
     {
-        return curr < rhs.curr || (curr == rhs.curr && id < rhs.id);
+        return curr < rhs.curr;
     }
 };
 
 struct Node {
-    int f, g;
+    int f;
     int board[9];  // puzzle configuration
     Move move;
 
-    Node() : f(0), g(0) {}
-    Node(const char *str) : f(0), g(0)
+    Node() : f(0) {}
+    Node(const char *str) : f(0)
     {
         for (int i=0; i<9; ++i) {
             board[i] = str[i]-'0';
         }
         move.curr = hash();
     }
-    Node(const int *st) : f(0), g(0)
+    Node(const int *st) : f(0)
     {
         for (int i=0; i<9; ++i) {
             board[i] = st[i];
@@ -288,12 +287,12 @@ void gen_db()
             // generate successors
             if (explored.find(nd.move) == explored.end()) {
                 explored.insert(nd.move);
-                db[nd.move.curr] = nd.g;
+                db[nd.move.curr] = nd.move.g;
                 vector<Node> moves = nd.moves();
                 for (vector<Node>::iterator it = moves.begin();
                         it != moves.end(); ++it) {
                     if (explored.find(it->move) == explored.end()) {
-                        it->g = nd.g + 1;
+                        it->move.g = nd.move.g + 1;
                         frontier.push(*it);
                     }
                 }
@@ -506,7 +505,7 @@ vector<int> IDS(const char *source)
     Node s(source);
     vector<int> path;
 
-    int max_depth = 1;
+    int max_depth = 0;
     while (true) {
         stack<Node> stk;
         stk.push(s);
@@ -518,8 +517,8 @@ vector<int> IDS(const char *source)
             ++info.node_expanded;
 
             // contruct path
-            if (nd.g) {
-                while (nd.g <= path.size()) {
+            if (nd.move.g) {
+                while (nd.move.g <= path.size()) {
                     path.pop_back();
                 }
                 path.push_back(nd.move.move);
@@ -529,14 +528,14 @@ vector<int> IDS(const char *source)
                 return path;
             }
 
-            if (nd.g >= max_depth) {
+            if (nd.move.g >= max_depth) {
                 continue;
             }
             // generate successors
             vector<Node> moves = nd.moves();
             for (vector<Node>::iterator it = moves.begin();
                     it != moves.end(); ++it) {
-                it->g = nd.g + 1;
+                it->move.g = nd.move.g + 1;
                 stk.push(*it);
             }
 
@@ -558,8 +557,6 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
 
     frontier.push(s);
 
-    unsigned long long seq = 0;  // sequence number for tree search
-
     while (!frontier.empty()) {
         info.space_complexity = max(info.space_complexity, frontier.size());
         // extract a node with minimal f value
@@ -574,9 +571,6 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
             while (mv.move) {
                 path.push_back(mv.move);
                 mv.curr = mv.prev;
-                if (tree) {
-                    mv.id = mv.pvid;
-                }
                 // find the parent
                 mv = *explored.find(mv);
             }
@@ -586,18 +580,23 @@ vector<int> A_star_search(const char *source, int (*h)(const int[]), bool tree)
         }
 
         // generate successors
-        if (tree || explored.find(nd.move) == explored.end()) {
-            explored.insert(nd.move);
+        set<Move>::iterator it = explored.find(nd.move);
+        if (tree || it == explored.end()) {
+            if (it == explored.end()) {
+                explored.insert(nd.move);
+            } else {
+                // A* tree search
+                if (it->g > nd.move.g) {
+                    explored.erase(it);
+                    explored.insert(nd.move);
+                }
+            }
             vector<Node> moves = nd.moves();
             for (vector<Node>::iterator it = moves.begin();
                     it != moves.end(); ++it) {
-                if (tree) {
-                    it->move.id = ++seq;
-                    it->move.pvid = nd.move.id;
-                }
                 if (tree || explored.find(it->move) == explored.end()) {
-                    it->g = nd.g + 1;
-                    it->f = it->g + h(it->board);
+                    it->move.g = nd.move.g + 1;
+                    it->f = it->move.g + h(it->board);
                     if (tree) {
                         frontier.push(*it);
                     } else {
