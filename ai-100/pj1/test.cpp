@@ -345,6 +345,8 @@ int main()
 #endif
 
 #ifdef FORCE_CHECK
+    // ---------- check cannot be finished ---------- //
+#if 0
     // notice: this takes days to run!!
     // notice: A* tree can exhaust all memory!
     printf("-- Checking correctness of algorithms --\n");
@@ -417,6 +419,7 @@ int main()
             }
         }
     }
+#endif
 #endif
 
     // ------------------------------ //
