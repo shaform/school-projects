@@ -438,7 +438,8 @@ int heuristic_database(const int st[])
 }
 
 // ---------- search functions ---------- //
-
+// algo: 1 - IDS, 2 - A* graph, 3 - A* tree
+// heuristic: 1 - misplacement, 2 - manhattan, 3 - pattern database
 void proj1(const char *source, int algo, int heuristic, std::vector<int> *sol)
 {
     if (!initialized)

@@ -472,6 +472,9 @@ int main()
             "[!!Warning!!] A* tree may exhaust all your memory!\n"
             "[!!Warning!!] Check your memory limit first!!\n"
             "[!!Warning!!] By default, 0 doesn't include A* tree\n"
+            "[!!Warning!!] IDS take so much time with more than\n"
+            "              3 tiles, so by default it halts at\n"
+            "              2-puzzle.\n"
             "***************************************************\n\n");
     printf("enter 4 integers to choose what to generate:\n"
             "(1) algorithm: 0 - all, 1 - IDS, 2 - A* graph, 3 - A* tree\n"
@@ -494,8 +497,9 @@ int main()
                             i, j, k, rd ? "random" : "all perms");
                     generate_output(i, j, k, false, rd);
                     if (sz) break;
+                    if (i==1 && k >= 2) break;  // break for IDS
                 }
-                if (i==1) break; // no heuristic for IDS
+                if (i==1) break;  // no heuristic for IDS
                 if (h) break;
             }
             if (alg) break;
