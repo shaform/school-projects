@@ -214,7 +214,7 @@ struct Frontier {
     }
     void decrease_key(int u)
     {
-        while (u>1 && heap[(u-1)/2] > heap[u]) {
+        while (u>=1 && heap[(u-1)/2] > heap[u]) {
             swap(heap[u], heap[(u-1)/2]);
             u = (u-1)/2;
         }
