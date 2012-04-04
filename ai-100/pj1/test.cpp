@@ -89,7 +89,7 @@ const int MAX_CONFS = 1000000000;
 
 int compare(const void *a, const void *b)
 {
-      return (*(char*)a - *(char*)b);
+    return (*(char*)a - *(char*)b);
 }
 
 // randomly shuffle the string
@@ -309,7 +309,7 @@ int main()
         }
 
         if (ck_ans != ck) {
-                printf("check #%d failed: %s\n", i, str2);
+            printf("check #%d failed: %s\n", i, str2);
         }
     }
 #endif
@@ -352,88 +352,74 @@ int main()
 #endif
 
 #ifdef FORCE_CHECK
-    // ---------- check cannot be finished ---------- //
-#if 0
-    // notice: this takes days to run!!
-    // notice: A* tree can exhaust all memory!
+    // ---------- check passed at 4/4 10:34 PM ---------- //
+    // notice: this takes hours to run!!
     printf("-- Checking correctness of algorithms --\n");
     {
-        // It seems impossible to check all configurations
-        // so we use random inputs for higher order puzzles.
+        // It seems impossible to check all algorithms
+        // so we only check some algorithms
         const int RANDOM_LIMIT = 2;
         const int CHECK_NUM = 50;
-        for (int i=0; i<RANDOM_LIMIT; ++i) {
+        for (int i=0; i<MAX_PUZZLES; ++i) {
             // print progress
             printf("check #%d\n", i+1);
             char str[10];
             memcpy(str, PUZZLES[i], sizeof(str));
             do {
-                int curr;
                 vector<int> vec;
-                proj1(str, 1, 0, &vec);
+                proj1(str, 2, 2, &vec);
                 if (vec.size() == 0) {
                     if ((check_input(str) && strcmp(str, PUZZLES[i]) != 0)) {
-                        printf("check failed at IDS: %s\n", str);
+                        printf("check failed at A* h2: %s\n", str);
                     }
                 } else if (!check_solution(str, vec, PUZZLES[i])) {
-                    printf("check failed at IDS: %s\n", str);
+                    printf("check failed at A* h2: %s\n", str);
                 }
-                curr = vec.size();
-                for (int j=1; j<=3; ++j) {
-                    for (int k=2; k<=3; ++k) {
-                        proj1(str, k, j, &vec);
-                        if (!check_solution(str, vec, PUZZLES[i]) ||
-                                vec.size() != curr) {
-                            printf("check failed at A*(%d), h%d(): %s\n", k, j, str);
-                        }
+                int curr = vec.size();
+                proj1(str, 2, 3, &vec);
+                if (!(check_solution(str, vec, PUZZLES[i]) || curr == 0) ||
+                        vec.size() != curr) {
+                    printf("check failed at A* h3: %s\n", str);
+                }
+
+                if (i < 2) {
+                    proj1(str, 1, 1, &vec);
+                    if (!(check_solution(str, vec, PUZZLES[i]) || curr == 0) ||
+                            vec.size() != curr) {
+                        printf("check failed at IDS: %s\n", str);
+                    }
+
+                    proj1(str, 3, 1, &vec);
+                    if (!(check_solution(str, vec, PUZZLES[i]) || curr == 0) ||
+                            vec.size() != curr) {
+                        printf("check failed at A* tree h1: %s\n", str);
+                    }
+                }
+
+                if (i < 4) {
+                    proj1(str, 3, 2, &vec);
+                    if (!(check_solution(str, vec, PUZZLES[i]) || curr == 0) ||
+                            vec.size() != curr) {
+                        printf("check failed at A* tree h2: %s\n", str);
+                    }
+                }
+
+                if (i < 5) {
+                    proj1(str, 3, 3, &vec);
+                    if (!(check_solution(str, vec, PUZZLES[i]) || curr == 0) ||
+                            vec.size() != curr) {
+                        printf("check failed at A* tree h3: %s\n", str);
                     }
                 }
             } while (next_permutation(str, str+9));
         }
-
-        // initialize random seed
-        srand(time(NULL));
-        for (int i=RANDOM_LIMIT; i<MAX_CONFS; ++i) {
-            char str[10];
-            memcpy(str, PUZZLES[i], sizeof(str));
-            int count = 0;
-            while (++count <= CHECK_NUM) {
-                // print progress
-                if (count % (CHECK_NUM / 10) == 0) {
-                    printf("check #%d-%d\n", i+1, count / (CHECK_NUM / 10));
-                }
-                int curr;
-                vector<int> vec;
-                proj1(str, 1, 0, &vec);
-                if (vec.size() == 0) {
-                    if ((check_input(str) && strcmp(str, PUZZLES[i]) != 0)) {
-                        printf("check failed at IDS: %s\n", str);
-                    }
-                } else if (!check_solution(str, vec, PUZZLES[i])) {
-                    printf("check failed at IDS: %s\n", str);
-                }
-                curr = vec.size();
-                for (int j=1; j<=3; ++j) {
-                    for (int k=2; k<=3; ++k) {
-                        proj1(str, k, j, &vec);
-                        if (!check_solution(str, vec, PUZZLES[i]) ||
-                                vec.size() != curr) {
-                            printf("check failed at A*(%d), h%d(): %s\n", k, j, str);
-                        }
-                    }
-                }
-                shuffle(str, 9);
-            }
-        }
     }
-#endif
 #endif
 
     // ------------------------------ //
     // Part II: Generating Statistics //
     // ------------------------------ //
 
-    extern const int NEXT_MOVE[MAX_MOVES][2];
     printf("-- Generating branching factors --\n");
     printf("do you want to generate? (y/n)\n");
     if (getchar() == 'y') {
