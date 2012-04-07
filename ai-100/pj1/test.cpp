@@ -61,6 +61,7 @@ int heuristic_test(const int[]);
 int heuristic_misplace(const int[]);
 int heuristic_manhattan(const int[]);
 int heuristic_database(const int[]);
+int heuristic_max(const int[]);
 
 void proj1(const char *, int, int, std::vector<int> *);
 vector<int> A_star_search(const char *, int (*)(const int[]), bool);
@@ -475,6 +476,7 @@ int main()
     printf("enter 4 integers to choose what to generate:\n"
             "(1) algorithm: 0 - all, 1 - IDS, 2 - A* graph, 3 - A* tree\n"
             "(2) heuristic: 0 - all, 1 - misplace, 2 - manhattan, 3 - database\n"
+            "               4 - max(h2, h3)\n"
             "(3) size: 0 - all, 1~8\n"
             "(4) random?: 1 - yes, 0 no\n");
     {

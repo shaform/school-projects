@@ -27,6 +27,7 @@ int heuristic_test(const int[]);
 int heuristic_misplace(const int[]);
 int heuristic_manhattan(const int[]);
 int heuristic_database(const int[]);
+int heuristic_max(const int[]);
 
 void proj1(const char *, int, int, std::vector<int> *);
 vector<int> A_star_search(const char *, int (*)(const int[]), bool);
@@ -459,6 +460,11 @@ int heuristic_database(const int st[])
     return it->second;
 }
 
+int heuristic_max(const int st[])
+{
+    return max(heuristic_manhattan(st), heuristic_database(st));
+}
+
 // ---------- search functions ---------- //
 // algo: 1 - IDS, 2 - A* graph, 3 - A* tree
 // heuristic: 1 - misplacement, 2 - manhattan, 3 - pattern database
@@ -479,6 +485,8 @@ void proj1(const char *source, int algo, int heuristic, std::vector<int> *sol)
             h = heuristic_manhattan;
         } else if (heuristic == 3) {
             h = heuristic_database;
+        } else if (heuristic == 4) {
+            h = heuristic_max;
         } else {
             h = heuristic_test;
         }
