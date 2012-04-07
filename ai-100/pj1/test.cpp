@@ -157,6 +157,9 @@ double generate_output(int alg, int h, int sz, bool sol_stat, bool rd)
     char str[10];
     int count = 100;
     memcpy(str, PUZZLES[sz-1], sizeof(str));
+    if (rd) {
+        shuffle(str, 9);
+    }
     while (true) {
         if (check_input(str)) {
             proj1(str, alg, h, &vec);
@@ -351,7 +354,7 @@ int main()
     }
 #endif
 
-#ifdef FORCE_CHECK
+#if FORCE_DEBUG
     // ---------- check passed at 4/4 10:34 PM ---------- //
     // notice: this takes hours to run!!
     printf("-- Checking correctness of algorithms --\n");
@@ -382,7 +385,7 @@ int main()
                     printf("check failed at A* h3: %s\n", str);
                 }
 
-                if (i < 2) {
+                if (i < 2 || vec.size() < 3) {
                     proj1(str, 1, 1, &vec);
                     if (!(check_solution(str, vec, PUZZLES[i]) || curr == 0) ||
                             vec.size() != curr) {
@@ -396,7 +399,7 @@ int main()
                     }
                 }
 
-                if (i < 4) {
+                if (i < 4 || vec.size() < 4) {
                     proj1(str, 3, 2, &vec);
                     if (!(check_solution(str, vec, PUZZLES[i]) || curr == 0) ||
                             vec.size() != curr) {
@@ -404,7 +407,7 @@ int main()
                     }
                 }
 
-                if (i < 5) {
+                if (i < 5 || vec.size() < 4) {
                     proj1(str, 3, 3, &vec);
                     if (!(check_solution(str, vec, PUZZLES[i]) || curr == 0) ||
                             vec.size() != curr) {
