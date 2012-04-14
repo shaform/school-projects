@@ -305,7 +305,9 @@ void gen_db()
 void init()
 {
     initialized = true;
+#ifdef ENABLE_DATABASE
     gen_db();
+#endif
 }
 
 bool check_input(const char *str)
@@ -426,6 +428,7 @@ int heuristic_manhattan(const int st[])
 // store exact distances up to MAX_DATABASE
 int heuristic_database(const int st[])
 {
+#ifdef ENABLE_DATABASE
     // get maximum num
     int maxn = 0;
     for (int i=0; i<9; ++i) {
@@ -458,6 +461,9 @@ int heuristic_database(const int st[])
 #endif
 
     return it->second;
+#else
+    return heuristic_manhattan(st);
+#endif
 }
 
 int heuristic_max(const int st[])

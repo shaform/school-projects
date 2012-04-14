@@ -355,7 +355,7 @@ int main()
     }
 #endif
 
-#if FORCE_DEBUG
+#ifdef FORCE_CHECK
     // ---------- check passed at 4/4 10:34 PM ---------- //
     // notice: this takes hours to run!!
     printf("-- Checking correctness of algorithms --\n");
