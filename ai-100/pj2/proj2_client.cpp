@@ -39,8 +39,8 @@ bool g_captured = false;
 
 // -- function prototypes -- //
 Action alpha_beta_search(State &, ActionCode);
-static int min_max_value(State, int, int, bool);
-int min_max_value(State, int, int, bool, bool);
+static int min_max_value(State &, int, int, bool);
+int min_max_value(State &, int, int, bool, bool);
 bool cutoff_test(State &);
 bool eval(State &);
 void print_state(State &s)
@@ -57,11 +57,11 @@ void print_state(State &s)
 
 bool cutoff_test(State &s)
 {
-    return s.depth >= 6;
+    return s.depth >= 7;
 }
 bool eval(State &s)
 {
-    return s.lost[g_enemy] - s.lost[g_player];
+    return s.lost[g_enemy-1] - s.lost[g_player-1];
 }
 
 void save_current_capture(int cb[6][6], int p, int capRows[6], int capCols[6])
@@ -144,28 +144,25 @@ Action alpha_beta_search(State &state, ActionCode acode)
                         continue;
                     }
                     if (state.chessboard[i][j] == 0) {
-                        printf("test %d %d\n", i, j);
                         state.chessboard[i][j] = g_player;
                         int t;
                         bool captured = calc_new_capture(state.chessboard, g_player, capRows, capCols);
                         if (captured) {
-                            printf("yes!! %d %d\n", i, j);
                             t = min_max_value(state, A, D_INF, true, true);
                         } else {
                             t = min_max_value(state, A, D_INF, false);
                         }
                         state.chessboard[i][j] = 0;
                         // choose this action
-                        if (t == D_NEGINF) {
-                            printf("wh5 INF?\n");
-                        }
                         if (t > v || v == D_NEGINF) {
                             act.x = i;
                             act.y = j;
                             v = t;
                             g_captured = captured;
+                            printf("test %d %d v: %d\n", i, j, v);
                         }
                         A = max(A, v);
+                        state.chessboard[i][j] = 0;
                     }
                 }
             }
@@ -212,7 +209,6 @@ Action alpha_beta_search(State &state, ActionCode acode)
             ++state.lost[g_enemy-1];
             for (int i=0; i<6; ++i) {
                 for (int j=0; j<6; ++j) {
-                    printf("enemy: %d\n", g_enemy);
                     if (state.chessboard[i][j] == g_enemy) {
                         state.chessboard[i][j] = 0;
                         int t = min_max_value(state, A, D_INF, false);
@@ -232,15 +228,38 @@ Action alpha_beta_search(State &state, ActionCode acode)
     return act;
 }
 
-static int min_max_value(State state, int A, int B, bool isMax)
+static int min_max_value(State &state, int A, int B, bool isMax)
 {
-    if (!isMax) {
-        return D_INF;
-    }
     return min_max_value(state, A, B, isMax, false);
 }
-int min_max_value(State state, int A, int B, bool isMax, bool isCapture)
+int min_max_value(State &state, int A, int B, bool isMax, bool isCapture)
 {
+    int onboard_e = 0, onboard_p = 0;
+    for (int i=0; i<6; ++i) {
+        for (int j=0; j<6; ++j) {
+            if (state.chessboard[i][j] == g_player) onboard_p++;
+            if (state.chessboard[i][j] == g_enemy) onboard_e++;
+        }
+    }
+    if (state.remains[g_enemy-1]
+            + onboard_e + state.lost[g_enemy-1] != 12) {
+        printf("Something is totally wrong!! enemy mismatch! in %d\n", isMax);
+        printf("exp: %d - %d\n", state.remains[g_enemy-1],
+                state.lost[g_enemy-1]);
+        printf("actual: - %d -\n", onboard_e);
+        print_state(state);
+        exit(1);
+    }
+    int t = state.remains[g_player-1]
+        + onboard_p + state.lost[g_player-1];
+    if (t != 12) {
+
+        printf("Something is totally wrong!! player mismatch!\n");
+        printf("exp: %d - %d\n", state.remains[g_player-1],
+                state.lost[g_player-1]);
+        printf("actual: - %d -\n", onboard_p);
+        exit(1);
+    }
     if (!isCapture && cutoff_test(state)) {
         return eval(state);
     }
@@ -268,12 +287,18 @@ int min_max_value(State state, int A, int B, bool isMax, bool isCapture)
                     if (isMax) {
                         v = max(v, min_max_value(state, A, B, false));
                         if (v >= B) {
+                            --state.depth;
+                            --state.lost[cEnemy-1];
+                            state.chessboard[i][j] = cEnemy;
                             return v;
                         }
                         A = max(A, v);
                     } else {
                         v = min(v, min_max_value(state, A, B, true));
                         if (v <= A) {
+                            --state.depth;
+                            --state.lost[cEnemy-1];
+                            state.chessboard[i][j] = cEnemy;
                             return v;
                         }
                         B = min(B, v);
@@ -306,6 +331,9 @@ int min_max_value(State state, int A, int B, bool isMax, bool isCapture)
                             print_state(state);
                         }
                         if (v >= B) {
+                            ++state.remains[cPlayer-1];
+                            state.chessboard[i][j] = 0;
+                            --state.depth;
                             return v;
                         }
                         A = max(A, v);
@@ -319,6 +347,9 @@ int min_max_value(State state, int A, int B, bool isMax, bool isCapture)
                             printf("too little!\n");
                         }
                         if (v <= A) {
+                            ++state.remains[cPlayer-1];
+                            state.chessboard[i][j] = 0;
+                            --state.depth;
                             return v;
                         }
                         B = min(B, v);
@@ -353,6 +384,9 @@ int min_max_value(State state, int A, int B, bool isMax, bool isCapture)
                                     print_state(state);
                                 }
                                 if (v >= B) {
+                                    --state.depth;
+                                    state.chessboard[new_i][new_j] = 0;
+                                    state.chessboard[i][j] = cPlayer;
                                     return v;
                                 }
                                 A = max(A, v);
@@ -366,6 +400,9 @@ int min_max_value(State state, int A, int B, bool isMax, bool isCapture)
                                     printf("too little!\n");
                                 }
                                 if (v <= A) {
+                                    --state.depth;
+                                    state.chessboard[new_i][new_j] = 0;
+                                    state.chessboard[i][j] = cPlayer;
                                     return v;
                                 }
                                 B = min(B, v);
