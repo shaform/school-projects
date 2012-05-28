@@ -56,6 +56,65 @@ void print_state(State &s)
     printf("remains: %d %d\n", s.remains[0], s.remains[1]);
 }
 
+const int V_LOST = 1000000;
+const int V_TWO = 600000;
+int calc_twos(int cb[6][6], int p)
+{
+    int count = 0;
+    for (int i=0; i<6; ++i) {
+        for (int j=0; j<6; ++j) {
+            // only space can work
+            if (cb[i][j] == 0) {
+                // from left
+                if (j>1 && (j == 2 || cb[i][j-3] != p)
+                        && cb[i][j-2] == p && cb[i][j-1] == p
+                        && (j == 5 || cb[i][j+1] != p)) {
+                    count++;
+                }
+
+                // from middle
+                if (j>0 && j<5
+                        && (j == 1 || cb[i][j-2] != p)
+                        && (j == 4 || cb[i][j+2] != p)
+                        && cb[i][j+1] == p && cb[i][j-1] == p) {
+                    count++;
+                }
+
+                // from right
+                if (j<4 && (j == 3 || cb[i][j+3] != p)
+                        && cb[i][j+2] == p && cb[i][j+1] == p
+                        && (j == 0 || cb[i][j-1] != p)) {
+                    count++;
+                }
+            }
+            if (cb[j][i] == 0) {
+                // from left
+                if (j>1 && (j == 2 || cb[j-3][i] != p)
+                        && cb[j-2][i] == p && cb[j-1][i] == p
+                        && (j == 5 || cb[j+1][i] != p)) {
+                    count++;
+                }
+
+                // from middle
+                if (j>0 && j<5
+                        && (j == 1 || cb[j-2][i] != p)
+                        && (j == 4 || cb[j+2][i] != p)
+                        && cb[j+1][i] == p && cb[j-1][i] == p) {
+                    count++;
+                }
+
+                // from right
+                if (j<4 && (j == 3 || cb[j+3][i] != p)
+                        && cb[j+2][i] == p && cb[j+1][i] == p
+                        && (j == 0 || cb[j-1][i] != p)) {
+                    count++;
+                }
+            }
+        }
+    }
+
+    return count;
+}
 
 bool cutoff_test(State &s)
 {
@@ -63,7 +122,13 @@ bool cutoff_test(State &s)
 }
 int eval(State &s)
 {
-    return s.lost[g_enemy-1] - s.lost[g_player-1];
+    int pvalue =
+        s.lost[g_enemy-1] * V_LOST
+        + calc_twos(s.chessboard, g_player) * V_TWO;
+    int evalue =
+        s.lost[g_player-1] * V_LOST
+        + calc_twos(s.chessboard, g_enemy) * V_TWO;
+    return pvalue - evalue;
 }
 
 void save_current_capture(int cb[6][6], int p, int capRows[6], int capCols[6])
@@ -173,6 +238,10 @@ Action alpha_beta_search(State &state, ActionCode acode)
             for (int i=0; i<6; ++i) {
                 for (int j=0; j<6; ++j) {
                     if (state.chessboard[i][j] == g_player) {
+                        printf("I'm %d\n", g_player);
+                        if (i==2 && j==3) {
+                            print_state(state);
+                        }
                         state.chessboard[i][j] = 0;
                         for (int k=0; k<4; ++k) {
                             int new_i = i + D_MOVES[k].x;
