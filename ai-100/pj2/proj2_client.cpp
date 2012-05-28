@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <climits>
 #include <algorithm>
+#include "def.h"
+#include "defb.h"
 
 #define ENABLE_PRUN 1
 using namespace std;
@@ -17,6 +19,9 @@ const struct { int x, y; } D_MOVES[] = {
 struct Action {
     int x, y, direction;
     int utility;
+};
+struct iPair {
+    int x, y;
 };
 enum ActionCode { DROP, CAPTURE, MOVE };
 
@@ -56,20 +61,73 @@ void print_state(State &s)
     printf("remains: %d %d\n", s.remains[0], s.remains[1]);
 }
 
-const int V_LOST = 1000000;
-const int V_TWO = 600000;
-int calc_twos(int cb[6][6], int p)
+int calc_moves_out(int cb[6][6], int p)
 {
     int count = 0;
+    // move in
+    for (int i=0; i<6; ++i) {
+        for (int j=0; j<6; ++j) {
+            // only player can work
+            if (cb[i][j] == p) {
+                bool goOut = (i > 0 && cb[i-1][j] == 0)
+                    || (i < 5 && cb[i+1][j] == 0);
+                // from left
+                if (j > 2 && cb[i][j-3] == p
+                        && cb[i][j-2] == p && cb[i][j-1] == p
+                        && (j == 3 || cb[i][j-4] != p)
+                        && (goOut || (j < 5 && cb[i][j+1] == 0))) {
+                    count++;
+                }
+
+                // from right
+                if (j < 3 && cb[i][j+3] == p
+                        && cb[i][j+2] == p && cb[i][j+1] == p
+                        && (j == 2 || cb[i][j+4] != p)
+                        && (goOut || (j > 0 && cb[i][j-1] == 0))) {
+                    count++;
+                }
+            }
+
+            if (cb[j][i] == p) {
+                bool goOut = (i > 0 && cb[j][i-1] == 0)
+                    || (i < 5 && cb[j][i+1] == 0);
+                // from left
+                if (j > 2 && cb[j-3][i] == p
+                        && cb[j-2][i] == p && cb[j-1][i] == p
+                        && (j == 3 || cb[j-4][i] != p)
+                        && (goOut || (j < 5 && cb[j+1][i] == 0))) {
+                    count++;
+                }
+
+                // from right
+                if (j < 3 && cb[j+3][i] == p
+                        && cb[j+2][i] == p && cb[j+1][i] == p
+                        && (j == 2 || cb[j+4][i] != p)
+                        && (goOut || (j > 0 && cb[j-1][i] == 0))) {
+                    count++;
+                }
+            }
+        }
+    }
+
+    return count;
+}
+iPair calc_twos(int cb[6][6], int p)
+{
+    iPair count = {0, 0};
     for (int i=0; i<6; ++i) {
         for (int j=0; j<6; ++j) {
             // only space can work
+            int m_count = 0;
+            if (i > 0 && cb[i-1][j] == p) m_count++;
+            if (i < 5 && cb[i+1][j] == p) m_count++;
             if (cb[i][j] == 0) {
                 // from left
                 if (j>1 && (j == 2 || cb[i][j-3] != p)
                         && cb[i][j-2] == p && cb[i][j-1] == p
                         && (j == 5 || cb[i][j+1] != p)) {
-                    count++;
+                    count.x++;
+                    count.y += m_count;
                 }
 
                 // from middle
@@ -77,22 +135,28 @@ int calc_twos(int cb[6][6], int p)
                         && (j == 1 || cb[i][j-2] != p)
                         && (j == 4 || cb[i][j+2] != p)
                         && cb[i][j+1] == p && cb[i][j-1] == p) {
-                    count++;
+                    count.x++;
+                    count.y += m_count;
                 }
 
                 // from right
                 if (j<4 && (j == 3 || cb[i][j+3] != p)
                         && cb[i][j+2] == p && cb[i][j+1] == p
                         && (j == 0 || cb[i][j-1] != p)) {
-                    count++;
+                    count.x++;
+                    count.y += m_count;
                 }
             }
+            m_count = 0;
+            if (i > 0 && cb[j][i-1] == p) m_count++;
+            if (i < 5 && cb[j][i+1] == p) m_count++;
             if (cb[j][i] == 0) {
                 // from left
                 if (j>1 && (j == 2 || cb[j-3][i] != p)
                         && cb[j-2][i] == p && cb[j-1][i] == p
                         && (j == 5 || cb[j+1][i] != p)) {
-                    count++;
+                    count.x++;
+                    count.y += m_count;
                 }
 
                 // from middle
@@ -100,14 +164,16 @@ int calc_twos(int cb[6][6], int p)
                         && (j == 1 || cb[j-2][i] != p)
                         && (j == 4 || cb[j+2][i] != p)
                         && cb[j+1][i] == p && cb[j-1][i] == p) {
-                    count++;
+                    count.x++;
+                    count.y += m_count;
                 }
 
                 // from right
                 if (j<4 && (j == 3 || cb[j+3][i] != p)
                         && cb[j+2][i] == p && cb[j+1][i] == p
                         && (j == 0 || cb[j-1][i] != p)) {
-                    count++;
+                    count.x++;
+                    count.y += m_count;
                 }
             }
         }
@@ -118,16 +184,41 @@ int calc_twos(int cb[6][6], int p)
 
 bool cutoff_test(State &s)
 {
+    if (s.lost[0] >= 10 || s.lost[1] >= 10)
+        return true;
     return s.depth >= 4;
 }
 int eval(State &s)
 {
+    if (s.lost[g_enemy-1] >= 10) {
+        return D_INF - 12 + s.lost[g_player-1];
+    }
+    if (s.lost[g_player-1] >= 10) {
+        return D_NEGINF + 12 - s.lost[g_enemy-1];
+    }
+
+    iPair pPair = calc_twos(s.chessboard, g_player);
+    iPair ePair = calc_twos(s.chessboard, g_enemy);
+    int pmove =
+        pPair.y * (g_sndHand ? V_MOVEB : V_MOVE)
+        + calc_moves_out(s.chessboard, g_player) * (g_sndHand ? V_MOVEOB : V_MOVEO);
+    int emove =
+        ePair.y * (g_sndHand ? V_MOVEB : V_MOVE)
+        + calc_moves_out(s.chessboard, g_enemy) * (g_sndHand ? V_MOVEOB : V_MOVEO);
+    if (s.remains[g_player-1] > 1) {
+        pmove /= 10;
+    }
+    if (s.remains[g_enemy-1] > 1) {
+        emove /= 10;
+    }
     int pvalue =
-        s.lost[g_enemy-1] * V_LOST
-        + calc_twos(s.chessboard, g_player) * V_TWO;
+        s.lost[g_enemy-1] * (g_sndHand ? V_LOSTB : V_LOST)
+        + pPair.x * (g_sndHand ? V_TWOB : V_TWO)
+        + pmove;
     int evalue =
-        s.lost[g_player-1] * V_LOST
-        + calc_twos(s.chessboard, g_enemy) * V_TWO;
+        s.lost[g_player-1] * (g_sndHand ? V_LOSTB : V_LOST)
+        + ePair.x * (g_sndHand ? V_TWOB : V_TWO)
+        + emove;
     return pvalue - evalue;
 }
 
@@ -196,6 +287,7 @@ bool calc_new_capture(int cb[6][6], int p, int capRows[6], int capCols[6])
 Action alpha_beta_search(State &state, ActionCode acode)
 {
     Action act;
+    State prev = state;
     state.depth = 0;
     int v = D_NEGINF, A = D_NEGINF;
 
@@ -220,12 +312,13 @@ Action alpha_beta_search(State &state, ActionCode acode)
                             t = min_value(state, A, D_INF);
                         }
                         // choose this action
-                        if (t > v || v == D_NEGINF || (v == t && captured)) {
+                        if (t > v || v == D_NEGINF || (v == t && captured)
+                                || (v == t && !g_captured && eval(state) > eval(prev))) {
                             act.x = i;
                             act.y = j;
                             v = t;
                             g_captured = captured;
-                            printf("test %d %d v: %d\n", i, j, v);
+                            prev = state;
                         }
                         A = max(A, v);
                         state.chessboard[i][j] = 0;
@@ -238,10 +331,6 @@ Action alpha_beta_search(State &state, ActionCode acode)
             for (int i=0; i<6; ++i) {
                 for (int j=0; j<6; ++j) {
                     if (state.chessboard[i][j] == g_player) {
-                        printf("I'm %d\n", g_player);
-                        if (i==2 && j==3) {
-                            print_state(state);
-                        }
                         state.chessboard[i][j] = 0;
                         for (int k=0; k<4; ++k) {
                             int new_i = i + D_MOVES[k].x;
@@ -259,12 +348,14 @@ Action alpha_beta_search(State &state, ActionCode acode)
                                 }
 
                                 // choose this action
-                                if (t > v || v == D_NEGINF) {
+                                if (t > v || v == D_NEGINF || (v == t && captured)
+                                        || (v == t && !g_captured && eval(state) > eval(prev))) {
                                     act.x = i;
                                     act.y = j;
                                     act.direction = k;
                                     v = t;
                                     g_captured = captured;
+                                    prev = state;
                                 }
                                 A = max(A, v);
                                 state.chessboard[new_i][new_j] = 0;
@@ -283,10 +374,12 @@ Action alpha_beta_search(State &state, ActionCode acode)
                         state.chessboard[i][j] = 0;
                         int t = min_value(state, A, D_INF);
                         // choose this action
-                        if (t > v || v == D_NEGINF) {
+                        if (t > v || v == D_NEGINF
+                                || (v == t && eval(state) > eval(prev))) {
                             act.x = i;
                             act.y = j;
                             v = t;
+                            prev = state;
                         }
                         A = max(A, v);
                         state.chessboard[i][j] = g_enemy;
@@ -331,8 +424,6 @@ void check_state(State &state)
 
 int max_value(State state, int A, int B, bool isCapture)
 {
-    check_state(state);
-
     if (!isCapture && cutoff_test(state)) {
         return eval(state);
     }
@@ -423,13 +514,15 @@ int max_value(State state, int A, int B, bool isCapture)
         }
     }
 
-    return v;
+    if (v == D_NEGINF) {
+        return D_NEGINF + 12 - state.lost[cPlayer];
+    } else {
+        return v;
+    }
 }
 
 int min_value(State state, int A, int B, bool isCapture)
 {
-    check_state(state);
-
     if (!isCapture && cutoff_test(state)) {
         return eval(state);
     }
@@ -475,9 +568,6 @@ int min_value(State state, int A, int B, bool isCapture)
                     } else {
                         v = min(v, max_value(state, A, B));
                     }
-                    if (v == D_NEGINF) {
-                        printf("too little!\n");
-                    }
 #if ENABLE_PRUN
                     if (v <= A) {
                         return v;
@@ -522,7 +612,11 @@ int min_value(State state, int A, int B, bool isCapture)
         }
     }
 
-    return v;
+    if (v == D_INF) {
+        return D_INF - 12 + state.lost[cPlayer];
+    } else {
+        return v;
+    }
 }
 
 
@@ -652,7 +746,7 @@ Action action(const char *cmd, int err_msg)
     } else {
         if (act == CAPTURE) {
             printf("Something is totally wrong!! do not expect capture!\n");
-            //exit(1);
+            exit(1);
         }
     }
     if (g_currentState.remains[g_player-1]) {
