@@ -3,8 +3,25 @@
 #include <cstdlib>
 #include <climits>
 #include <algorithm>
+
+#define ENABLE_INPUT 1
+
+#if ENABLE_DEF
 #include "def.h"
 #include "defb.h"
+#elif ENABLE_INPUT
+int V_LOST, V_TWO, V_MOVE, V_MOVEO;
+int V_LOSTB, V_TWOB, V_MOVEB, V_MOVEOB;
+#else
+const int V_LOST = 104183;
+const int V_TWO = 12474;
+const int V_MOVE = 243430;
+const int V_MOVEO = 131694;
+const int V_LOSTB = 446958;
+const int V_TWOB =  108905;
+const int V_MOVEB = 249174;
+const int V_MOVEOB = 176545;
+#endif
 
 #define ENABLE_PRUN 1
 using namespace std;
@@ -39,7 +56,7 @@ struct State {
     int depth;
 } g_currentState;
 
-int g_player = 1;
+int g_player = 221;
 int g_enemy = 2;
 int g_sndHand = 0;
 bool g_captured = false;
@@ -61,6 +78,23 @@ void print_state(State &s)
     printf("remains: %d %d\n", s.remains[0], s.remains[1]);
 }
 
+int calc_dist(int cb[6][6], int p = g_player)
+{
+    int posi[12], posj[12];
+    int count = 0, ret = 0;
+    for (int i=0; i<6; ++i)
+        for (int j=0; j<6; ++j)
+            if (cb[i][j] == p) {
+                posi[count] = i;
+                posj[count] = j;
+                count++;
+            }
+    for (int i=0; i<count; ++i)
+        for (int j=i+1; j<count; ++j)
+            ret += abs(posi[i]-posi[j]) + abs(posj[i]-posj[j]);
+
+    return ret;
+}
 int calc_moves_out(int cb[6][6], int p)
 {
     int count = 0;
@@ -186,7 +220,14 @@ bool cutoff_test(State &s)
 {
     if (s.lost[0] >= 10 || s.lost[1] >= 10)
         return true;
-    return s.depth >= 4;
+    if (s.remains[0] > 0 && s.remains[1] > 0)
+        return s.depth >= 3;
+    else if (s.lost[0] < 2 || s.lost[1] < 2)
+        return s.depth >= 3;
+    else if (s.lost[0] < 7 || s.lost[1] < 7)
+        return s.depth >= 4;
+    else
+        return s.depth >= 5;
 }
 int eval(State &s)
 {
@@ -213,74 +254,98 @@ int eval(State &s)
     }
     int pvalue =
         s.lost[g_enemy-1] * (g_sndHand ? V_LOSTB : V_LOST)
-        + pPair.x * (g_sndHand ? V_TWOB : V_TWO)
+        + pPair.x * (g_sndHand ? V_TWOB : V_TWO) * (s.remains[g_player-1] > 0)
         + pmove;
     int evalue =
         s.lost[g_player-1] * (g_sndHand ? V_LOSTB : V_LOST)
-        + ePair.x * (g_sndHand ? V_TWOB : V_TWO)
+        + ePair.x * (g_sndHand ? V_TWOB : V_TWO) * (s.remains[g_enemy-1] > 0)
         + emove;
     return pvalue - evalue;
 }
 
-void save_current_capture(int cb[6][6], int p, int capRows[6], int capCols[6])
+bool calc_drop_capture(int cb[6][6], int p, int i, int j);
+bool calc_move_capture(int cb[6][6], int p,
+        int i, int j, int ni, int nj)
 {
-    for (int i=0; i<6; ++i) {
-        int m = 0;
-        for (int j=0, t=0; j<6; ++j) {
-            if (cb[i][j] == p) {
-                ++t;
-                m = max(m, t);
-            } else {
-                t = 0;
-            }
-        }
-        capRows[i] = (m == 3);
+    if (calc_drop_capture(cb, p, ni, nj)) {
+        return true;
     }
-    for (int i=0; i<6; ++i) {
-        int m = 0;
-        for (int j=0, t=0; j<6; ++j) {
-            if (cb[j][i] == p) {
-                ++t;
-                m = max(m, t);
-            } else {
-                t = 0;
-            }
-        }
-        capCols[i] = (m == 3);
+
+    // from left
+    if (j > 2 && cb[i][j-3] == p
+            && cb[i][j-2] == p && cb[i][j-1] == p
+            && (j == 3 || cb[i][j-4] != p)) {
+        return true;
     }
+
+    // from right
+    if (j < 3 && cb[i][j+3] == p
+            && cb[i][j+2] == p && cb[i][j+1] == p
+            && (j == 2 || cb[i][j+4] != p)) {
+        return true;
+    }
+
+    // from top
+    if (i > 2 && cb[i-3][j] == p
+            && cb[i-2][j] == p && cb[i-1][j] == p
+            && (i == 3 || cb[i-4][j] != p)) {
+        return true;
+    }
+
+    // from bottom
+    if (i < 3 && cb[i+3][j] == p
+            && cb[i+2][j] == p && cb[i+1][j] == p
+            && (i == 2 || cb[i+4][j] != p)) {
+        return true;
+    }
+    return false;
 }
-bool calc_new_capture(int cb[6][6], int p, int capRows[6], int capCols[6])
+bool calc_drop_capture(int cb[6][6], int p, int i, int j)
 {
-    for (int i=0; i<6; ++i) {
-        if (capRows[i]) continue;
-        int m = 0;
-        for (int j=0, t=0; j<6; ++j) {
-            if (cb[i][j] == p) {
-                ++t;
-                m = max(m, t);
-            } else {
-                t = 0;
-            }
-        }
-        if (m == 3) {
-            return true;
-        }
+    // from left
+    if (j>1 && (j == 2 || cb[i][j-3] != p)
+            && cb[i][j-2] == p && cb[i][j-1] == p
+            && (j == 5 || cb[i][j+1] != p)) {
+        return true;
     }
-    for (int i=0; i<6; ++i) {
-        if (capCols[i]) continue;
-        int m = 0;
-        for (int j=0, t=0; j<6; ++j) {
-            if (cb[j][i] == p) {
-                ++t;
-                m = max(m, t);
-            } else {
-                t = 0;
-            }
-        }
-        if (m == 3) {
-            return true;
-        }
+
+    // from middle
+    if (j>0 && j<5
+            && (j == 1 || cb[i][j-2] != p)
+            && (j == 4 || cb[i][j+2] != p)
+            && cb[i][j+1] == p && cb[i][j-1] == p) {
+        return true;
     }
+
+    // from right
+    if (j<4 && (j == 3 || cb[i][j+3] != p)
+            && cb[i][j+2] == p && cb[i][j+1] == p
+            && (j == 0 || cb[i][j-1] != p)) {
+        return true;
+    }
+
+    // from top
+    if (i>1 && (i == 2 || cb[i-3][j] != p)
+            && cb[i-2][j] == p && cb[i-1][j] == p
+            && (i == 5 || cb[i+1][j] != p)) {
+        return true;
+    }
+
+    // from middle
+    if (i>0 && i<5
+            && (i == 1 || cb[i-2][j] != p)
+            && (i == 4 || cb[i+2][j] != p)
+            && cb[i+1][j] == p && cb[i-1][j] == p) {
+        return true;
+    }
+
+    // from bottom
+    if (i<4 && (i == 3 || cb[i+3][j] != p)
+            && cb[i+2][j] == p && cb[i+1][j] == p
+            && (i == 0 || cb[i-1][j] != p)) {
+        return true;
+    }
+
     return false;
 }
 
@@ -291,11 +356,9 @@ Action alpha_beta_search(State &state, ActionCode acode)
     state.depth = 0;
     int v = D_NEGINF, A = D_NEGINF;
 
-    int capRows[6], capCols[6];
     switch (acode) {
         case DROP:
             --state.remains[g_player-1];
-            save_current_capture(state.chessboard, g_player, capRows, capCols);
             for (int i=0; i<6; ++i) {
                 for (int j=0; j<6; ++j) {
                     if (state.remains[g_player-1] >= 10
@@ -305,7 +368,7 @@ Action alpha_beta_search(State &state, ActionCode acode)
                     if (state.chessboard[i][j] == 0) {
                         state.chessboard[i][j] = g_player;
                         int t;
-                        bool captured = calc_new_capture(state.chessboard, g_player, capRows, capCols);
+                        bool captured = calc_drop_capture(state.chessboard, g_player, i, j);
                         if (captured) {
                             t = max_value(state, A, D_INF, true);
                         } else {
@@ -327,7 +390,6 @@ Action alpha_beta_search(State &state, ActionCode acode)
             }
             break;
         case MOVE:
-            save_current_capture(state.chessboard, g_player, capRows, capCols);
             for (int i=0; i<6; ++i) {
                 for (int j=0; j<6; ++j) {
                     if (state.chessboard[i][j] == g_player) {
@@ -339,8 +401,8 @@ Action alpha_beta_search(State &state, ActionCode acode)
                                     && state.chessboard[new_i][new_j] == 0) {
                                 state.chessboard[new_i][new_j] = g_player;
                                 int t;
-                                bool captured = calc_new_capture(state.chessboard, g_player,
-                                        capRows, capCols);
+                                bool captured = calc_move_capture(state.chessboard, g_player,
+                                        i, j, new_i, new_j);
                                 if (captured) {
                                     t = max_value(state, A, D_INF, true);
                                 } else {
@@ -349,7 +411,10 @@ Action alpha_beta_search(State &state, ActionCode acode)
 
                                 // choose this action
                                 if (t > v || v == D_NEGINF || (v == t && captured)
-                                        || (v == t && !g_captured && eval(state) > eval(prev))) {
+                                        || (v == t && !g_captured && eval(state) > eval(prev))
+                                        || (v == t && !g_captured &&
+                                            state.remains[0] == 0 && state.remains[1] == 0
+                                            && calc_dist(prev.chessboard) > calc_dist(state.chessboard))) {
                                     act.x = i;
                                     act.y = j;
                                     act.direction = k;
@@ -434,7 +499,6 @@ int max_value(State state, int A, int B, bool isCapture)
     const int cEnemy = g_enemy;
     const int cPlayer = g_player;
 
-    int capRows[6], capCols[6];
     if (isCapture) {
         ++state.lost[cEnemy-1];
         for (int i=0; i<6; ++i) {
@@ -455,7 +519,6 @@ int max_value(State state, int A, int B, bool isCapture)
     } else if (state.remains[cPlayer-1]) {
         // DROP
         --state.remains[cPlayer-1];
-        save_current_capture(state.chessboard, cPlayer, capRows, capCols);
         for (int i=0; i<6; ++i) {
             for (int j=0; j<6; ++j) {
                 if (state.remains[cPlayer-1] >= 10
@@ -464,7 +527,7 @@ int max_value(State state, int A, int B, bool isCapture)
                 }
                 if (state.chessboard[i][j] == 0) {
                     state.chessboard[i][j] = cPlayer;
-                    if (calc_new_capture(state.chessboard, cPlayer, capRows, capCols)) {
+                    if (calc_drop_capture(state.chessboard, cPlayer, i, j)) {
                         int t = max(v, max_value(state, A, B, true));
                         v = max(v, t);
                     } else {
@@ -482,7 +545,6 @@ int max_value(State state, int A, int B, bool isCapture)
         }
     } else {
         // MOVE
-        save_current_capture(state.chessboard, cPlayer, capRows, capCols);
         for (int i=0; i<6; ++i) {
             for (int j=0; j<6; ++j) {
                 if (state.chessboard[i][j] == cPlayer) {
@@ -494,7 +556,8 @@ int max_value(State state, int A, int B, bool isCapture)
                                 && state.chessboard[new_i][new_j] == 0) {
                             state.chessboard[new_i][new_j] = cPlayer;
 
-                            if (calc_new_capture(state.chessboard, cPlayer, capRows, capCols)) {
+                            if (calc_move_capture(state.chessboard, cPlayer, i, j,
+                                        new_i, new_j)) {
                                 v = max(v, max_value(state, A, B, true));
                             } else {
                                 v = max(v, min_value(state, A, B));
@@ -533,7 +596,6 @@ int min_value(State state, int A, int B, bool isCapture)
     const int cEnemy = g_player;
     const int cPlayer = g_enemy;
 
-    int capRows[6], capCols[6];
     if (isCapture) {
         ++state.lost[cEnemy-1];
         for (int i=0; i<6; ++i) {
@@ -554,7 +616,6 @@ int min_value(State state, int A, int B, bool isCapture)
     } else if (state.remains[cPlayer-1]) {
         // DROP
         --state.remains[cPlayer-1];
-        save_current_capture(state.chessboard, cPlayer, capRows, capCols);
         for (int i=0; i<6; ++i) {
             for (int j=0; j<6; ++j) {
                 if (state.remains[cPlayer-1] >= 10
@@ -563,7 +624,7 @@ int min_value(State state, int A, int B, bool isCapture)
                 }
                 if (state.chessboard[i][j] == 0) {
                     state.chessboard[i][j] = cPlayer;
-                    if (calc_new_capture(state.chessboard, cPlayer, capRows, capCols)) {
+                    if (calc_drop_capture(state.chessboard, cPlayer, i, j)) {
                         v = min(v, min_value(state, A, B, true));
                     } else {
                         v = min(v, max_value(state, A, B));
@@ -580,7 +641,6 @@ int min_value(State state, int A, int B, bool isCapture)
         }
     } else {
         // MOVE
-        save_current_capture(state.chessboard, cPlayer, capRows, capCols);
         for (int i=0; i<6; ++i) {
             for (int j=0; j<6; ++j) {
                 if (state.chessboard[i][j] == cPlayer) {
@@ -592,7 +652,8 @@ int min_value(State state, int A, int B, bool isCapture)
                                 && state.chessboard[new_i][new_j] == 0) {
                             state.chessboard[new_i][new_j] = cPlayer;
 
-                            if (calc_new_capture(state.chessboard, cPlayer, capRows, capCols)) {
+                            if (calc_move_capture(state.chessboard, cPlayer, i, j,
+                                        new_i, new_j)) {
                                 v = min(v, min_value(state, A, B, true));
                             } else {
                                 v = min(v, max_value(state, A, B));
@@ -629,6 +690,21 @@ int main(int argc, char * argv[])
         g_player = atoi(argv[1]);
         g_enemy = (g_player % 2) + 1;
     }
+
+#if ENABLE_INPUT
+    if (argc > 3) {
+        printf("TTTT\n");
+        FILE *f = fopen(argv[2], "r");
+        fscanf(f, "%d%d%d%d\n",
+                &V_LOST, &V_TWO, &V_MOVE, &V_MOVEO);
+        fclose(f);
+
+        f = fopen(argv[3], "r");
+        fscanf(f, "%d%d%d%d\n",
+                &V_LOSTB, &V_TWOB, &V_MOVEB, &V_MOVEOB);
+        fclose(f);
+    }
+#endif
     int snum = 0;
     while (true) {
         FILE *file = fopen("request.txt", "r");
@@ -691,7 +767,6 @@ Action action(const char *cmd, int err_msg)
             if (strcmp(cmd, "/capture") == 0) {
                 printf("strange!\n");
             }
-            // Enemy has moved;
             --g_currentState.remains[g_enemy-1];
         }
         int onboard_e = 0, onboard_p = 0;
@@ -703,18 +778,17 @@ Action action(const char *cmd, int err_msg)
         }
         if (g_currentState.remains[g_enemy-1]
                 + onboard_e + g_currentState.lost[g_enemy-1] != 12) {
-            printf("Something is totally wrong!! enemy mismatch!\n");
+            printf("Something is totally wrong!! enemy mismatch as %d!\n", g_enemy);
             printf("exp: %d - %d\n", g_currentState.remains[g_enemy-1],
                     g_currentState.lost[g_enemy-1]);
             printf("actual: - %d -\n", onboard_e);
-            exit(1);
         }
         int t = g_currentState.remains[g_player-1]
             + onboard_p + g_currentState.lost[g_player-1];
         if (t == 11) g_currentState.lost[g_player-1]++;
         else if (t != 12) {
 
-            printf("Something is totally wrong!! player mismatch!\n");
+            printf("Something is totally wrong!! player mismatch! as %d!\n", g_player);
             printf("exp: %d - %d\n", g_currentState.remains[g_player-1],
                     g_currentState.lost[g_player-1]);
             printf("actual: - %d -\n", onboard_p);
@@ -762,7 +836,6 @@ Action action(const char *cmd, int err_msg)
     }
 
     Action point = alpha_beta_search(g_currentState, act);
-    printf("my current = %d\n", g_currentState.remains[g_player-1]);
     return point;
 }
 
