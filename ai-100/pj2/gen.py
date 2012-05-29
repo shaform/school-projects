@@ -155,6 +155,21 @@ def calcBestResults():
         bestResults[h] = getResult(bestParams[0], bestParams[1],
                 bestParams[0], bestParams[1], h)
 
+def checkSame(params, h):
+    return False
+    print 'check same'
+    a = getResult(bestParams[h], bestParams[h],
+            params[h], params[h], 0)
+    b = getResult(bestParams[h], bestParams[h],
+            params[h], params[h], 1)
+    if a+b > 0:
+        print 'better'
+        return True
+    else:
+        print 'worse'
+        return False
+
+
 if nextFId > 0 and nextSId > 0:
     with open(SAVE_PATH + '/bestF%d' % (nextFId-1), 'r') as f:
         bestParams[0] = pickle.load(f)
@@ -199,11 +214,16 @@ while True:
     print cParams[testHand]
     
     if result != 0 and result > bResults[testHand]:
+
+        if result > bResults[testHand]:
+            tryNum = 0
+
         bResults[testHand] = result
         bParams[testHand] = list(cParams[testHand])
-        tryNum = 0
 
-        if bResults[testHand] > bestResults[testHand]:
+        if (bResults[testHand] > bestResults[testHand]
+                or (result == bestResults[testHand]
+                    and checkSame(cParams, testHand))):
             print 'New Result'
             if testHand == 0:
                 saveFirst(cParams[0])
@@ -223,5 +243,5 @@ while True:
         switchNum = switchNum + 1
 
     if switchNum > 100:
-        if bResult[testHand] > 0 or switchNum > 500:
+        if bResults[testHand] > 0 or switchNum > 200:
             testHand = (testHand + 1) % 2
