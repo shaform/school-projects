@@ -5,22 +5,25 @@
 #include <algorithm>
 
 #define ENABLE_INPUT 1
+#define DEPTH_INC 1
 
 #if ENABLE_DEF
 #include "def.h"
 #include "defb.h"
 #elif ENABLE_INPUT
-int V_LOST, V_TWO, V_MOVE, V_MOVEO;
-int V_LOSTB, V_TWOB, V_MOVEB, V_MOVEOB;
+int V_LOST, V_TWO, V_MOVE, V_MOVEO, V_REDU;
+int V_LOSTB, V_TWOB, V_MOVEB, V_MOVEOB, V_REDUB;
 #else
 const int V_LOST = 104183;
 const int V_TWO = 12474;
 const int V_MOVE = 243430;
 const int V_MOVEO = 131694;
+const int V_REDU = 10;
 const int V_LOSTB = 446958;
 const int V_TWOB =  108905;
 const int V_MOVEB = 249174;
 const int V_MOVEOB = 176545;
+const int V_REDUB = 10;
 #endif
 
 #define ENABLE_PRUN 1
@@ -221,21 +224,21 @@ bool cutoff_test(State &s)
     if (s.lost[0] >= 10 || s.lost[1] >= 10)
         return true;
     if (s.remains[0] > 0 && s.remains[1] > 0)
-        return s.depth >= 3;
+        return s.depth >= 3 + DEPTH_INC;
     else if (s.lost[0] < 2 || s.lost[1] < 2)
-        return s.depth >= 3;
+        return s.depth >= 3 + DEPTH_INC;
     else if (s.lost[0] < 7 || s.lost[1] < 7)
-        return s.depth >= 4;
+        return s.depth >= 4 + DEPTH_INC;
     else
-        return s.depth >= 5;
+        return s.depth >= 5 + DEPTH_INC;
 }
 int eval(State &s)
 {
     if (s.lost[g_enemy-1] >= 10) {
-        return D_INF - 12 + s.lost[g_player-1];
+        return D_INF - s.lost[g_player-1];
     }
     if (s.lost[g_player-1] >= 10) {
-        return D_NEGINF + 12 - s.lost[g_enemy-1];
+        return D_NEGINF + s.lost[g_enemy-1];
     }
 
     iPair pPair = calc_twos(s.chessboard, g_player);
@@ -247,18 +250,18 @@ int eval(State &s)
         ePair.y * (g_sndHand ? V_MOVEB : V_MOVE)
         + calc_moves_out(s.chessboard, g_enemy) * (g_sndHand ? V_MOVEOB : V_MOVEO);
     if (s.remains[g_player-1] > 1) {
-        pmove /= 10;
+        pmove /= (g_sndHand ? V_REDUB : V_REDU);
     }
     if (s.remains[g_enemy-1] > 1) {
-        emove /= 10;
+        emove /= (g_sndHand ? V_REDUB : V_REDU);
     }
     int pvalue =
         s.lost[g_enemy-1] * (g_sndHand ? V_LOSTB : V_LOST)
-        + pPair.x * (g_sndHand ? V_TWOB : V_TWO) * (s.remains[g_player-1] > 0)
+        + pPair.x * (g_sndHand ? V_TWOB : V_TWO) * (s.remains[g_player-1] > 0 ? 1 : 0)
         + pmove;
     int evalue =
         s.lost[g_player-1] * (g_sndHand ? V_LOSTB : V_LOST)
-        + ePair.x * (g_sndHand ? V_TWOB : V_TWO) * (s.remains[g_enemy-1] > 0)
+        + ePair.x * (g_sndHand ? V_TWOB : V_TWO) * (s.remains[g_enemy-1] > 0 ? 1 : 0)
         + emove;
     return pvalue - evalue;
 }
@@ -695,13 +698,13 @@ int main(int argc, char * argv[])
     if (argc > 3) {
         printf("TTTT\n");
         FILE *f = fopen(argv[2], "r");
-        fscanf(f, "%d%d%d%d\n",
-                &V_LOST, &V_TWO, &V_MOVE, &V_MOVEO);
+        fscanf(f, "%d%d%d%d%d\n",
+                &V_LOST, &V_TWO, &V_MOVE, &V_MOVEO, &V_REDU);
         fclose(f);
 
         f = fopen(argv[3], "r");
-        fscanf(f, "%d%d%d%d\n",
-                &V_LOSTB, &V_TWOB, &V_MOVEB, &V_MOVEOB);
+        fscanf(f, "%d%d%d%d%d\n",
+                &V_LOSTB, &V_TWOB, &V_MOVEB, &V_MOVEOB, &V_REDUB);
         fclose(f);
     }
 #endif
