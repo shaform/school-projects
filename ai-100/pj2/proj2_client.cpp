@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <climits>
+#include <ctime>
 #include <algorithm>
 
 #define ENABLE_INPUT 1
@@ -63,6 +64,7 @@ int g_player = 221;
 int g_enemy = 2;
 int g_sndHand = 0;
 bool g_captured = false;
+time_t g_startTime;
 
 // -- function prototypes -- //
 Action alpha_beta_search(State &, ActionCode);
@@ -223,6 +225,12 @@ bool cutoff_test(State &s)
 {
     if (s.lost[0] >= 10 || s.lost[1] >= 10)
         return true;
+    if (time(NULL) - g_startTime > 30) {
+        if (time(NULL) - g_startTime > 40) {
+            return true;
+        }
+        return s.depth >= 2;
+    }
     if (g_currentState.remains[0] == 0
             && g_currentState.remains[1] == 0) {
         if (s.lost[0] > 5 && s.lost[1] > 5)
@@ -754,6 +762,7 @@ int main(int argc, char * argv[])
 bool first_time = true;
 Action action(const char *cmd, int err_msg)
 {
+    g_startTime = time(NULL);
     if (first_time) {
         g_currentState.remains[0] = 12;
         g_currentState.remains[1] = 12;
