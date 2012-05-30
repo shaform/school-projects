@@ -15,15 +15,15 @@
 int V_LOST, V_TWO, V_MOVE, V_MOVEO, V_REDU;
 int V_LOSTB, V_TWOB, V_MOVEB, V_MOVEOB, V_REDUB;
 #else
-const int V_LOST = 104183;
-const int V_TWO = 12474;
-const int V_MOVE = 243430;
-const int V_MOVEO = 131694;
+const int V_LOST = 477885;
+const int V_TWO = 41575;
+const int V_MOVE = 828891;
+const int V_MOVEO = 599221;
 const int V_REDU = 10;
-const int V_LOSTB = 446958;
-const int V_TWOB =  108905;
-const int V_MOVEB = 249174;
-const int V_MOVEOB = 176545;
+const int V_LOSTB = 622079;
+const int V_TWOB =  873744;
+const int V_MOVEB = 806641;
+const int V_MOVEOB = 630353;
 const int V_REDUB = 10;
 #endif
 

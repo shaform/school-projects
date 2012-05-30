@@ -33,10 +33,7 @@ def loadSecondParams(FId):
 def checkParam(aParam, bParam, hand):
     t = getResult(aParam, aParam,
             bParam, bParam, hand)
-    if t > 0:
-        return t;
-    else:
-        return None
+    return t
 
 def checkPair(aId, aRole, bId, bRole, hand):
     aParam = []
@@ -73,9 +70,13 @@ while cRound < nextFId or cRound < nextSId:
                 r = [0, 0]
                 for j in range(cRound, maxIds[q]):
                     t = checkPair(i, p, j, q, p)
-                    if t:
+                    if t > 0:
                         outputLine('[%d,%d] wins with %d' % (p, i, t))
                         r = [r[0]+1, r[1]+t]
+                    elif t < 0:
+                        outputLine('[%d,%d] loses with %d' % (p, i, t))
+                    else:
+                        outputLine('[%d,%d] error' % (p, i))
                 outputLine('[%d,%d] wins %d with %d against %d' % (p, i, r[0], r[1], q))
 
     cRound = cRound + ROUND_NUM
