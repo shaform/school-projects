@@ -72,6 +72,7 @@ static int max_value(State, int, int, bool = false);
 static int min_value(State, int, int, bool = false);
 bool cutoff_test(State &);
 int eval(State &);
+#if ENABLE_ERRMSG
 void print_state(State &s)
 {
     for (int i=0; i<6; ++i) {
@@ -82,6 +83,7 @@ void print_state(State &s)
     }
     printf("remains: %d %d\n", s.remains[0], s.remains[1]);
 }
+#endif
 
 int calc_dist(int cb[6][6], int p = g_player)
 {
@@ -223,14 +225,17 @@ iPair calc_twos(int cb[6][6], int p)
 
 bool cutoff_test(State &s)
 {
+
     if (s.lost[0] >= 10 || s.lost[1] >= 10)
         return true;
+
     if (time(NULL) - g_startTime > 30) {
         if (time(NULL) - g_startTime > 40) {
             return true;
         }
         return s.depth >= 2;
     }
+
     if (g_currentState.remains[0] == 0
             && g_currentState.remains[1] == 0) {
         if (s.lost[0] > 5 && s.lost[1] > 5)
@@ -473,6 +478,7 @@ Action alpha_beta_search(State &state, ActionCode acode)
 }
 
 
+#if ENABLE_ERRMSG
 void check_state(State &state)
 {
     int onboard_e = 0, onboard_p = 0;
@@ -502,6 +508,7 @@ void check_state(State &state)
         exit(1);
     }
 }
+#endif
 
 int max_value(State state, int A, int B, bool isCapture)
 {
@@ -781,9 +788,11 @@ Action action(const char *cmd, int err_msg)
         first_time = false;
     } else {
         if (g_currentState.remains[g_enemy-1] && !g_captured) {
+#if ENABLE_ERRMSG
             if (strcmp(cmd, "/capture") == 0) {
                 printf("strange!\n");
             }
+#endif
             --g_currentState.remains[g_enemy-1];
         }
         int onboard_e = 0, onboard_p = 0;
@@ -793,6 +802,7 @@ Action action(const char *cmd, int err_msg)
                 if (g_currentState.chessboard[i][j] == g_enemy) onboard_e++;
             }
         }
+#if ENABLE_ERRMSG
         if (g_currentState.remains[g_enemy-1]
                 + onboard_e + g_currentState.lost[g_enemy-1] != 12) {
             printf("Something is totally wrong!! enemy mismatch as %d!\n", g_enemy);
@@ -800,9 +810,11 @@ Action action(const char *cmd, int err_msg)
                     g_currentState.lost[g_enemy-1]);
             printf("actual: - %d -\n", onboard_e);
         }
+#endif
         int t = g_currentState.remains[g_player-1]
             + onboard_p + g_currentState.lost[g_player-1];
         if (t == 11) g_currentState.lost[g_player-1]++;
+#if ENABLE_ERRMSG
         else if (t != 12) {
 
             printf("Something is totally wrong!! player mismatch! as %d!\n", g_player);
@@ -811,6 +823,7 @@ Action action(const char *cmd, int err_msg)
             printf("actual: - %d -\n", onboard_p);
             exit(1);
         }
+#endif
     }
 
     ActionCode act;
@@ -823,6 +836,7 @@ Action action(const char *cmd, int err_msg)
     }
 
     if (g_captured) {
+#if ENABLE_ERRMSG
         if (act != CAPTURE) {
             printf("Something is totally wrong!! expect capture!\n");
             for (int i=0; i<6; ++i) {
@@ -833,7 +847,9 @@ Action action(const char *cmd, int err_msg)
             }
             exit(1);
         }
+#endif
         g_captured = false;
+#if ENABLE_ERRMSG
     } else {
         if (act == CAPTURE) {
             printf("Something is totally wrong!! do not expect capture!\n");
@@ -850,6 +866,7 @@ Action action(const char *cmd, int err_msg)
             printf("Something is totally wrong!! do not expect drop!\n");
             exit(1);
         }
+#endif
     }
 
     Action point = alpha_beta_search(g_currentState, act);
