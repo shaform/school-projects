@@ -223,12 +223,15 @@ bool cutoff_test(State &s)
 {
     if (s.lost[0] >= 10 || s.lost[1] >= 10)
         return true;
+    if (g_currentState.remains[0] == 0
+            && g_currentState.remains[1] == 0) {
+        if (s.lost[0] > 5 && s.lost[1] > 5)
+            return s.depth >= 5 + DEPTH_INC;
+    }
     if (s.remains[0] > 0 && s.remains[1] > 0)
         return s.depth >= 3 + DEPTH_INC;
-    else if (s.lost[0] < 2 || s.lost[1] < 2)
+    else if (s.lost[0] < 8 || s.lost[1] < 8)
         return s.depth >= 3 + DEPTH_INC;
-    else if (s.lost[0] < 7 || s.lost[1] < 7)
-        return s.depth >= 4 + DEPTH_INC;
     else
         return s.depth >= 5 + DEPTH_INC;
 }
@@ -243,27 +246,29 @@ int eval(State &s)
 
     iPair pPair = calc_twos(s.chessboard, g_player);
     iPair ePair = calc_twos(s.chessboard, g_enemy);
-    int pmove =
-        pPair.y * (g_sndHand ? V_MOVEB : V_MOVE)
-        + calc_moves_out(s.chessboard, g_player) * (g_sndHand ? V_MOVEOB : V_MOVEO);
-    int emove =
-        ePair.y * (g_sndHand ? V_MOVEB : V_MOVE)
-        + calc_moves_out(s.chessboard, g_enemy) * (g_sndHand ? V_MOVEOB : V_MOVEO);
+    int pmoveo = calc_moves_out(s.chessboard, g_player);
+    int emoveo = calc_moves_out(s.chessboard, g_enemy);
     if (s.remains[g_player-1] > 1) {
-        pmove /= (g_sndHand ? V_REDUB : V_REDU);
+        pmoveo /= (g_sndHand ? V_REDUB : V_REDU);
+        pPair.y /= (g_sndHand ? V_REDUB : V_REDU);
     }
     if (s.remains[g_enemy-1] > 1) {
-        emove /= (g_sndHand ? V_REDUB : V_REDU);
+        emoveo /= (g_sndHand ? V_REDUB : V_REDU);
+        ePair.y /= (g_sndHand ? V_REDUB : V_REDU);
     }
-    int pvalue =
-        s.lost[g_enemy-1] * (g_sndHand ? V_LOSTB : V_LOST)
-        + pPair.x * (g_sndHand ? V_TWOB : V_TWO) * (s.remains[g_player-1] > 0 ? 1 : 0)
-        + pmove;
-    int evalue =
-        s.lost[g_player-1] * (g_sndHand ? V_LOSTB : V_LOST)
-        + ePair.x * (g_sndHand ? V_TWOB : V_TWO) * (s.remains[g_enemy-1] > 0 ? 1 : 0)
-        + emove;
-    return pvalue - evalue;
+    if (s.remains[g_player-1] == 0) {
+        pPair.x = 0;
+    }
+    if (s.remains[g_enemy-1] == 0) {
+        ePair.x = 0;
+    }
+    int value =
+        (s.lost[g_enemy-1]-s.lost[g_player-1]) * (g_sndHand ? V_LOSTB : V_LOST)
+        + (pPair.x-ePair.x) * (g_sndHand ? V_TWOB : V_TWO)
+        + (pPair.y-ePair.y) * (g_sndHand ? V_MOVEB : V_MOVE)
+        + (pmoveo-emoveo) * (g_sndHand ? V_MOVEOB : V_MOVEO);
+
+    return value;
 }
 
 bool calc_drop_capture(int cb[6][6], int p, int i, int j);
@@ -581,7 +586,7 @@ int max_value(State state, int A, int B, bool isCapture)
     }
 
     if (v == D_NEGINF) {
-        return D_NEGINF + 12 - state.lost[cPlayer];
+        return D_NEGINF + state.lost[cPlayer];
     } else {
         return v;
     }
@@ -677,7 +682,7 @@ int min_value(State state, int A, int B, bool isCapture)
     }
 
     if (v == D_INF) {
-        return D_INF - 12 + state.lost[cPlayer];
+        return D_INF - state.lost[cPlayer];
     } else {
         return v;
     }
