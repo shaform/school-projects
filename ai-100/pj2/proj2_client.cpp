@@ -65,6 +65,7 @@ int g_enemy = 2;
 int g_sndHand = 0;
 bool g_captured = false;
 time_t g_startTime;
+bool g_cutOne = false, g_cutTwo = false;
 
 // -- function prototypes -- //
 Action alpha_beta_search(State &, ActionCode);
@@ -229,8 +230,8 @@ bool cutoff_test(State &s)
     if (s.lost[0] >= 10 || s.lost[1] >= 10)
         return true;
 
-    if (time(NULL) - g_startTime > 30) {
-        if (time(NULL) - g_startTime > 40) {
+    if (g_cutOne) {
+        if (g_cutTwo) {
             return true;
         }
         return s.depth >= 2;
@@ -250,6 +251,15 @@ bool cutoff_test(State &s)
 }
 int eval(State &s)
 {
+    if (!g_cutOne) {
+        if (time(NULL) - g_startTime > 30) {
+            g_cutOne = true;
+        }
+    } else if (!g_cutTwo) {
+        if (time(NULL) - g_startTime > 40) {
+            g_cutTwo = true;
+        }
+    }
     if (s.lost[g_enemy-1] >= 10) {
         return D_INF - s.lost[g_player-1];
     }
@@ -770,6 +780,8 @@ bool first_time = true;
 Action action(const char *cmd, int err_msg)
 {
     g_startTime = time(NULL);
+    g_cutOne = false;
+    g_cutTwo = false;
     if (first_time) {
         g_currentState.remains[0] = 12;
         g_currentState.remains[1] = 12;
