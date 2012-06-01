@@ -6,25 +6,28 @@
 #include <algorithm>
 
 #define ENABLE_INPUT 1
-#define DEPTH_INC 1
 
 #if ENABLE_DEF
 #include "def.h"
 #include "defb.h"
 #elif ENABLE_INPUT
-int V_LOST, V_TWO, V_MOVE, V_MOVEO, V_REDU;
-int V_LOSTB, V_TWOB, V_MOVEB, V_MOVEOB, V_REDUB;
+int DEPTH_INC;
+int V_LOST, V_TWO, V_MOVE, V_MOVEO, V_REDU, V_DEPTH, V_LINE;
+int V_LOSTB, V_TWOB, V_MOVEB, V_MOVEOB, V_REDUB, V_DEPTHB, V_LINEB;
 #else
+const int DEPTH_INC = 4;
 const int V_LOST = 477885;
 const int V_TWO = 41575;
 const int V_MOVE = 828891;
 const int V_MOVEO = 599221;
 const int V_REDU = 10;
+const int V_LINE = 0;
 const int V_LOSTB = 622079;
 const int V_TWOB =  873744;
 const int V_MOVEB = 806641;
 const int V_MOVEOB = 630353;
 const int V_REDUB = 10;
+const int V_LINEB = 0;
 #endif
 
 #define ENABLE_PRUN 1
@@ -42,7 +45,7 @@ struct Action {
     int utility;
 };
 struct iPair {
-    int x, y;
+    int x, y, z;
 };
 enum ActionCode { DROP, CAPTURE, MOVE };
 
@@ -156,20 +159,23 @@ int calc_moves_out(int cb[6][6], int p)
 }
 iPair calc_twos(int cb[6][6], int p)
 {
-    iPair count = {0, 0};
+    iPair count = {0, 0, 0};
     for (int i=0; i<6; ++i) {
+        bool line_x = false, line_y = false;
         for (int j=0; j<6; ++j) {
             // only space can work
             int m_count = 0;
             if (i > 0 && cb[i-1][j] == p) m_count++;
             if (i < 5 && cb[i+1][j] == p) m_count++;
             if (cb[i][j] == 0) {
+
                 // from left
                 if (j>1 && (j == 2 || cb[i][j-3] != p)
                         && cb[i][j-2] == p && cb[i][j-1] == p
                         && (j == 5 || cb[i][j+1] != p)) {
                     count.x++;
                     count.y += m_count;
+                    line_x = true;
                 }
 
                 // from middle
@@ -179,6 +185,7 @@ iPair calc_twos(int cb[6][6], int p)
                         && cb[i][j+1] == p && cb[i][j-1] == p) {
                     count.x++;
                     count.y += m_count;
+                    line_x = true;
                 }
 
                 // from right
@@ -187,6 +194,7 @@ iPair calc_twos(int cb[6][6], int p)
                         && (j == 0 || cb[i][j-1] != p)) {
                     count.x++;
                     count.y += m_count;
+                    line_x = true;
                 }
             }
             m_count = 0;
@@ -199,6 +207,7 @@ iPair calc_twos(int cb[6][6], int p)
                         && (j == 5 || cb[j+1][i] != p)) {
                     count.x++;
                     count.y += m_count;
+                    line_y = true;
                 }
 
                 // from middle
@@ -208,6 +217,7 @@ iPair calc_twos(int cb[6][6], int p)
                         && cb[j+1][i] == p && cb[j-1][i] == p) {
                     count.x++;
                     count.y += m_count;
+                    line_y = true;
                 }
 
                 // from right
@@ -216,9 +226,13 @@ iPair calc_twos(int cb[6][6], int p)
                         && (j == 0 || cb[j-1][i] != p)) {
                     count.x++;
                     count.y += m_count;
+                    line_y = true;
                 }
             }
         }
+
+        if (line_x) count.z++;
+        if (line_y) count.z++;
     }
 
     return count;
@@ -240,23 +254,18 @@ bool cutoff_test(State &s)
     if (g_currentState.remains[0] == 0
             && g_currentState.remains[1] == 0) {
         if (s.lost[0] > 5 && s.lost[1] > 5)
-            return s.depth >= 5 + DEPTH_INC;
+            return s.depth >= 2 + DEPTH_INC;
     }
-    if (s.remains[0] > 0 && s.remains[1] > 0)
-        return s.depth >= 3 + DEPTH_INC;
-    else if (s.lost[0] < 8 || s.lost[1] < 8)
-        return s.depth >= 3 + DEPTH_INC;
-    else
-        return s.depth >= 5 + DEPTH_INC;
+    return s.depth >= DEPTH_INC;
 }
 int eval(State &s)
 {
     if (!g_cutOne) {
-        if (time(NULL) - g_startTime > 30) {
+        if (time(NULL) - g_startTime > 20) {
             g_cutOne = true;
         }
     } else if (!g_cutTwo) {
-        if (time(NULL) - g_startTime > 40) {
+        if (time(NULL) - g_startTime > 30) {
             g_cutTwo = true;
         }
     }
@@ -281,15 +290,18 @@ int eval(State &s)
     }
     if (s.remains[g_player-1] == 0) {
         pPair.x = 0;
+        pPair.z = 0;
     }
     if (s.remains[g_enemy-1] == 0) {
         ePair.x = 0;
+        ePair.z = 0;
     }
     int value =
         (s.lost[g_enemy-1]-s.lost[g_player-1]) * (g_sndHand ? V_LOSTB : V_LOST)
         + (pPair.x-ePair.x) * (g_sndHand ? V_TWOB : V_TWO)
         + (pPair.y-ePair.y) * (g_sndHand ? V_MOVEB : V_MOVE)
-        + (pmoveo-emoveo) * (g_sndHand ? V_MOVEOB : V_MOVEO);
+        + (pmoveo-emoveo) * (g_sndHand ? V_MOVEOB : V_MOVEO)
+        + (pPair.z-ePair.z) * (g_sndHand ? V_LINEB : V_LINE);
 
     return value;
 }
@@ -384,7 +396,7 @@ Action alpha_beta_search(State &state, ActionCode acode)
 {
     Action act;
     State prev = state;
-    state.depth = 0;
+    state.depth = 1;
     int v = D_NEGINF, A = D_NEGINF;
 
     switch (acode) {
@@ -522,11 +534,12 @@ void check_state(State &state)
 
 int max_value(State state, int A, int B, bool isCapture)
 {
-    if (!isCapture && cutoff_test(state)) {
-        return eval(state);
+    if (!isCapture) {
+        if (cutoff_test(state)) {
+            return eval(state);
+        }
+        ++state.depth;
     }
-
-    ++state.depth;
 
     int v = D_NEGINF;
     const int cEnemy = g_enemy;
@@ -619,11 +632,12 @@ int max_value(State state, int A, int B, bool isCapture)
 
 int min_value(State state, int A, int B, bool isCapture)
 {
-    if (!isCapture && cutoff_test(state)) {
-        return eval(state);
+    if (!isCapture) {
+        if (cutoff_test(state)) {
+            return eval(state);
+        }
+        ++state.depth;
     }
-
-    ++state.depth;
 
     int v = D_INF;
     const int cEnemy = g_player;
@@ -728,13 +742,13 @@ int main(int argc, char * argv[])
     if (argc > 3) {
         printf("TTTT\n");
         FILE *f = fopen(argv[2], "r");
-        fscanf(f, "%d%d%d%d%d\n",
-                &V_LOST, &V_TWO, &V_MOVE, &V_MOVEO, &V_REDU);
+        fscanf(f, "%d%d%d%d%d%d%d\n",
+                &V_LOST, &V_TWO, &V_MOVE, &V_MOVEO, &V_REDU, &V_DEPTH, &V_LINE);
         fclose(f);
 
         f = fopen(argv[3], "r");
-        fscanf(f, "%d%d%d%d%d\n",
-                &V_LOSTB, &V_TWOB, &V_MOVEB, &V_MOVEOB, &V_REDUB);
+        fscanf(f, "%d%d%d%d%d%d%d\n",
+                &V_LOSTB, &V_TWOB, &V_MOVEB, &V_MOVEOB, &V_REDUB, &V_DEPTHB, &V_LINEB);
         fclose(f);
     }
 #endif
@@ -788,10 +802,16 @@ Action action(const char *cmd, int err_msg)
         g_currentState.lost[0] = 0;
         g_currentState.lost[1] = 0;
 
+#if ENABLE_INPUT
+        DEPTH_INC = V_DEPTH;
+#endif
         for (int i=0; i<6; ++i) {
             for (int j=0; j<6; ++j) {
                 if (g_currentState.chessboard[i][j] != 0) {
                     g_sndHand = 1;
+#if ENABLE_INPUT
+                    DEPTH_INC = V_DEPTHB;
+#endif
                     g_currentState.remains[g_enemy-1] = 11;
                     break;
                 }
