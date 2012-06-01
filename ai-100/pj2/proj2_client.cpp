@@ -623,7 +623,7 @@ int max_value(State state, int A, int B, bool isCapture)
     }
 
     if (v == D_NEGINF) {
-        return D_NEGINF + state.lost[cEnemy];
+        return D_NEGINF + state.lost[cEnemy-1];
     } else {
         return v;
     }
@@ -720,7 +720,7 @@ int min_value(State state, int A, int B, bool isCapture)
     }
 
     if (v == D_INF) {
-        return D_INF - state.lost[cEnemy];
+        return D_INF - state.lost[cEnemy-1];
     } else {
         return v;
     }
