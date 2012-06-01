@@ -42,17 +42,11 @@ const struct { int x, y; } D_MOVES[] = {
 
 struct Action {
     int x, y, direction;
-    int utility;
 };
 struct iPair {
     int x, y, z;
 };
 enum ActionCode { DROP, CAPTURE, MOVE };
-
-bool operator<(const Action &lhs, const Action &rhs)
-{
-    return lhs.utility < rhs.utility;
-}
 
 // -- internal states -- //
 
@@ -69,6 +63,7 @@ int g_sndHand = 0;
 bool g_captured = false;
 time_t g_startTime;
 bool g_cutOne = false, g_cutTwo = false;
+bool g_action = true;
 
 // -- function prototypes -- //
 Action alpha_beta_search(State &, ActionCode);
@@ -394,11 +389,12 @@ bool calc_drop_capture(int cb[6][6], int p, int i, int j)
 
 Action alpha_beta_search(State &state, ActionCode acode)
 {
-    Action act;
+    Action act = {0, 0, 0};
     State prev = state;
     state.depth = 1;
     int v = D_NEGINF, A = D_NEGINF;
 
+    g_action = false;
     switch (acode) {
         case DROP:
             --state.remains[g_player-1];
@@ -422,6 +418,7 @@ Action alpha_beta_search(State &state, ActionCode acode)
                                 || (v == t && !g_captured && eval(state) > eval(prev))) {
                             act.x = i;
                             act.y = j;
+                            g_action = true;
                             v = t;
                             g_captured = captured;
                             prev = state;
@@ -461,6 +458,7 @@ Action alpha_beta_search(State &state, ActionCode acode)
                                     act.x = i;
                                     act.y = j;
                                     act.direction = k;
+                                    g_action = true;
                                     v = t;
                                     g_captured = captured;
                                     prev = state;
@@ -486,6 +484,7 @@ Action alpha_beta_search(State &state, ActionCode acode)
                                 || (v == t && eval(state) > eval(prev))) {
                             act.x = i;
                             act.y = j;
+                            g_action = true;
                             v = t;
                             prev = state;
                         }
@@ -624,7 +623,7 @@ int max_value(State state, int A, int B, bool isCapture)
     }
 
     if (v == D_NEGINF) {
-        return D_NEGINF + state.lost[cPlayer];
+        return D_NEGINF + state.lost[cEnemy];
     } else {
         return v;
     }
@@ -721,7 +720,7 @@ int min_value(State state, int A, int B, bool isCapture)
     }
 
     if (v == D_INF) {
-        return D_INF - state.lost[cPlayer];
+        return D_INF - state.lost[cEnemy];
     } else {
         return v;
     }
@@ -774,7 +773,9 @@ int main(int argc, char * argv[])
 
             FILE *fout = fopen("action.txt", "w");
             snum++;
-            if (strcmp(cmd, "/move")==0) {
+            if (!g_action) {
+                printf("No action is possible!\n");
+            } else if (strcmp(cmd, "/move")==0) {
                 fprintf(fout, "%d %s %d %d %s", snum, cmd, output.x, output.y, D_OUT[output.direction]);
                 printf("Write: %d %s %d %d %s\n", snum, cmd, output.x, output.y, D_OUT[output.direction]);
             } else {
