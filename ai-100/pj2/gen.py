@@ -10,17 +10,19 @@ import signal
  
 
 MAX = 1000000
-SMAX = 50
+SMAX = 20
+DMAX = 4
 SAVE_PATH = './gen_param'
 PSMALL = 4
+PDEPTH = 5
 
 nextFId = 0
 nextSId = 0
 
 bestResults = [-12, -12]
 bestParams = [
-        [0, 0, 0, 0, 10],
-        [0, 0, 0, 0, 10],
+        [0, 0, 0, 0, 10, 4, 0],
+        [0, 0, 0, 0, 10, 4, 0],
         ]
 
 
@@ -53,20 +55,36 @@ def genRandomParams(params):
     for p in params:
         gened.append(random.randint(0, MAX))
     gened[PSMALL] = random.randint(1, SMAX)
+    gened[PDEPTH] = random.randint(1, DMAX)
     return gened
 
 def genNewParams(params):
     gened = list(params)
     idx = random.randint(0, len(params)-1)
     p = gened[idx]
+
     if idx == PSMALL:
+        if p > SMAX:
+            p = SMAX
         gened[idx] = random.randint(max(1, p/2), min(p+p/2, SMAX))
         if random.randint(0, 100) > 80:
             gened[idx] = random.randint(1, SMAX)
+    elif idx == PDEPTH:
+        gened[idx] = random.randint(1, DMAX)
     else:
+        if p > MAX:
+            p = MAX
         gened[idx] = random.randint(max(0, p/2), min(p+p/2, MAX))
         if random.randint(0, 100) > 80:
             gened[idx] = random.randint(0, MAX)
+
+    for i in [0,1,2,3,6]:
+        if random.randint(0, 100) > 90:
+            p = gened[i]
+            gened[i] = random.randint(max(0, p/2), min(p+p/2, MAX))
+            if random.randint(0, 100) > 98:
+                gened[idx] = random.randint(0, MAX)
+
 
     return gened
 
@@ -178,8 +196,16 @@ if __name__ == '__main__':
     if nextFId > 0 and nextSId > 0:
         with open(SAVE_PATH + '/bestF%d' % (nextFId-1), 'r') as f:
             bestParams[0] = pickle.load(f)
+            if len(bestParams[0]) == 5:
+                bestParams[0].append(4)
+            if len(bestParams[0]) == 6:
+                bestParams[0].append(0)
         with open(SAVE_PATH + '/bestS%d' % (nextSId-1), 'r') as f:
             bestParams[1] = pickle.load(f)
+            if len(bestParams[0]) == 5:
+                bestParams[0].append(4)
+            if len(bestParams[1]) == 6:
+                bestParams[1].append(0)
         calcBestResults()
 
     print bestResults
@@ -246,6 +272,8 @@ if __name__ == '__main__':
         else:
             tryNum = tryNum + 1
             switchNum = switchNum + 1
+            if result != 0 and result == bResults[testHand]:
+                bParams[testHand] = list(cParams[testHand])
 
         if switchNum > 20:
             if testHand == 0:
@@ -254,3 +282,4 @@ if __name__ == '__main__':
                 m = nextSId > nextFId
             if m or switchNum > 30:
                 testHand = (testHand + 1) % 2
+                switchNum = 0
