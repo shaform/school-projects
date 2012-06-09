@@ -103,7 +103,7 @@ def getResult(fp1, sp1, fp2, sp2, hand):
     writeParams(fp2, 2, 'first')
     writeParams(sp2, 2, 'second')
 
-    b = Popen(['java', 'Umpire', '%d' % (hand+1), 'false', '600'], stdout=subprocess.PIPE)
+    b = Popen(['java', 'Umpire', '%d' % (hand+1), 'false', '550'], stdout=subprocess.PIPE)
     c = Popen(['./proj2_client', '1', 'first', 'second'],
             cwd=os.path.abspath('./player1/'), stdout=subprocess.PIPE)
     d = Popen(['./proj2_client', '2', 'first', 'second'],
@@ -120,7 +120,7 @@ def getResult(fp1, sp1, fp2, sp2, hand):
 
     try:
         while True:
-            signal.alarm(60)
+            signal.alarm(70)
             line = b.stdout.readline()
             signal.alarm(0)
 
