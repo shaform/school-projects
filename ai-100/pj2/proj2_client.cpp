@@ -256,11 +256,11 @@ bool cutoff_test(State &s)
 int eval(State &s)
 {
     if (!g_cutOne) {
-        if (time(NULL) - g_startTime > 20) {
+        if (difftime(time(NULL), g_startTime) > 20) {
             g_cutOne = true;
         }
     } else if (!g_cutTwo) {
-        if (time(NULL) - g_startTime > 30) {
+        if (difftime(time(NULL), g_startTime) > 30) {
             g_cutTwo = true;
         }
     }
