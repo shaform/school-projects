@@ -23,11 +23,21 @@ f = open(SAVE_PATH + '/result', 'a')
 
 def loadFirstParams(FId):
     with open(LOAD_PATH + '/bestF%d' % FId, 'r') as f:
-        return pickle.load(f)
+        params = pickle.load(f)
+        if len(params) == 5:
+            params.append(4)
+        if len(params) == 6:
+            params.append(0)
+        return params
 
 def loadSecondParams(FId):
     with open(LOAD_PATH + '/bestS%d' % FId, 'r') as f:
-        return pickle.load(f)
+        params = pickle.load(f)
+        if len(params) == 5:
+            params.append(4)
+        if len(params) == 6:
+            params.append(0)
+        return params
 
 
 def checkParam(aParam, bParam, hand):
@@ -56,8 +66,6 @@ def outputLine(line):
 
 ROUND_NUM = 5
 cRound = 0
-
-
 while cRound < nextFId or cRound < nextSId:
     outputLine('round %d' % cRound)
 
@@ -65,7 +73,6 @@ while cRound < nextFId or cRound < nextSId:
 
     for p in range(2):
         for q in range(2):
-
             for i in range(cRound, maxIds[p]):
                 r = [0, 0]
                 for j in range(cRound, maxIds[q]):
