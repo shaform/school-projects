@@ -15,19 +15,22 @@ int DEPTH_INC;
 int V_LOST, V_TWO, V_MOVE, V_MOVEO, V_REDU, V_DEPTH, V_LINE;
 int V_LOSTB, V_TWOB, V_MOVEB, V_MOVEOB, V_REDUB, V_DEPTHB, V_LINEB;
 #else
-const int DEPTH_INC = 4;
-const int V_LOST = 477885;
-const int V_TWO = 41575;
-const int V_MOVE = 828891;
-const int V_MOVEO = 599221;
-const int V_REDU = 10;
-const int V_LINE = 0;
-const int V_LOSTB = 622079;
-const int V_TWOB =  873744;
-const int V_MOVEB = 806641;
-const int V_MOVEOB = 630353;
-const int V_REDUB = 10;
-const int V_LINEB = 0;
+int DEPTH_INC = 4;
+const int V_LOST = 876294;
+const int V_TWO = 251283;
+const int V_MOVE = 720102;
+const int V_MOVEO = 846047;
+const int V_REDU = 1;
+const int V_DEPTH = 4;
+const int V_LINE = 751278;
+
+const int V_LOSTB = 911133;
+const int V_TWOB =  75813;
+const int V_MOVEB = 159224;
+const int V_MOVEOB = 395136;
+const int V_REDUB = 7;
+const int V_DEPTHB = 3;
+const int V_LINEB = 68489;
 #endif
 
 #define ENABLE_PRUN 1
@@ -775,7 +778,11 @@ int main(int argc, char * argv[])
             snum++;
             if (!g_action) {
                 printf("No action is possible!\n");
-            } else if (strcmp(cmd, "/move")==0) {
+                output.x = rand() % 6;
+                output.y = rand() % 6;
+                output.direction = rand() % 4;
+            }
+            if (strcmp(cmd, "/move")==0) {
                 fprintf(fout, "%d %s %d %d %s", snum, cmd, output.x, output.y, D_OUT[output.direction]);
                 printf("Write: %d %s %d %d %s\n", snum, cmd, output.x, output.y, D_OUT[output.direction]);
             } else {
@@ -803,16 +810,12 @@ Action action(const char *cmd, int err_msg)
         g_currentState.lost[0] = 0;
         g_currentState.lost[1] = 0;
 
-#if ENABLE_INPUT
         DEPTH_INC = V_DEPTH;
-#endif
         for (int i=0; i<6; ++i) {
             for (int j=0; j<6; ++j) {
                 if (g_currentState.chessboard[i][j] != 0) {
                     g_sndHand = 1;
-#if ENABLE_INPUT
                     DEPTH_INC = V_DEPTHB;
-#endif
                     g_currentState.remains[g_enemy-1] = 11;
                     break;
                 }
