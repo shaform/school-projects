@@ -5,12 +5,14 @@
 #include <ctime>
 #include <algorithm>
 
-#define ENABLE_INPUT 1
+// whether to accept generated input
+#define ENABLE_INPUT 0
+// whether to enable alpha-beta pruning
+#define ENABLE_PRUN 1
+// whether to enable debug messages
+#define ENABLE_ERRMSG 0
 
-#if ENABLE_DEF
-#include "def.h"
-#include "defb.h"
-#elif ENABLE_INPUT
+#if ENABLE_INPUT
 int DEPTH_INC;
 int V_LOST, V_TWO, V_MOVE, V_MOVEO, V_REDU, V_DEPTH, V_LINE;
 int V_LOSTB, V_TWOB, V_MOVEB, V_MOVEOB, V_REDUB, V_DEPTHB, V_LINEB;
@@ -33,7 +35,6 @@ const int V_DEPTHB = 3;
 const int V_LINEB = 68489;
 #endif
 
-#define ENABLE_PRUN 1
 using namespace std;
 
 const char *D_OUT[] = {"up", "right", "down", "left", ""};
