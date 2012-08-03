@@ -339,6 +339,8 @@ void th_yield()
 {
 	entry_section();
 
+	if (rq_begin == rq_end) return;
+
 	if (threads[curr]->state == RUNNING)
 		rq_push(curr);
 	else if (threads[curr]->state == WAITING)
