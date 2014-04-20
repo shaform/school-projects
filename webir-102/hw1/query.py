@@ -38,7 +38,7 @@ def ngram(text, db):
 def parse_queries(queries, db):
     processed = []
     for query in queries:
-        p_query = dict(queries)
+        p_query = dict(query)
         q = defaultdict(int)
 
         if config.Q_CONCEPTS:
