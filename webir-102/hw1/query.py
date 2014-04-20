@@ -29,9 +29,12 @@ def ngram(text, db):
     for w in words:
         t = []
         for x in w:
-            t.append(db.ngram(x))
+            if x not in db.stop_list:
+                t.append(db.ngram(x))
         for i in range(len(t)-1):
-            ngrams.append(','.join(t[i:i+2]))
+            x = ','.join(t[i:i+2])
+            if x not in db.stop_list:
+                ngrams.append(x)
         ngrams.extend(t)
     return ngrams
 

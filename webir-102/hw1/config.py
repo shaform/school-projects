@@ -1,11 +1,19 @@
 import os
 
-STOP_LIST = 100
-OKAPI_BM25 = True
+# parameters
+STOP_LIST = 104
 Q_TITLE = True
 Q_QUESTION = True
 Q_NARRATIVE = True
 Q_CONCEPTS = True
+
+# OKAPI_BM25
+OKAPI_BM25 = True
+OK_AVG_L = 771.77
+OK_K1 = 1.2
+OK_K3 = 1.2
+OK_B = 0.75
+OK_N = 97445
 
 # file paths
 P_DATA_DIR = os.path.join(os.path.dirname(

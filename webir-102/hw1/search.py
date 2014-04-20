@@ -1,9 +1,11 @@
 import argparse
 import os
+import random
 import sys
 
 import db
 import query
+import vsm
 
 def process_commands():
     parser = argparse.ArgumentParser(description='Search for news.')
@@ -43,30 +45,47 @@ if __name__ == '__main__':
     db_path = search_db.MEMORY
     if args.l_db_path is not None:
         db_path = args.l_db_path
-        search_db.open(args.model_dir, db_path)
+        search_db.open(args.model_dir, args.doc_dir, db_path)
     else:
         if args.s_db_path is not None:
             db_path = args.s_db_path
             if os.path.exists(db_path):
                 os.remove(db_path)
-        search_db.open(args.model_dir, db_path)
+        search_db.open(args.model_dir, args.doc_dir, db_path)
         search_db.build_index()
 
     
-    print('== analyse queries...\n')
+    print('== analyse queries...')
     queries = query.parse_queries(query.parse_xml(args.input), search_db)
     q_ngrams = query.collect_ngrams(queries)
-    print('{} ngrams collected.\n'.format(len(q_ngrams)))
+    print('{} ngrams collected.'.format(len(q_ngrams)))
 
+    if args.l_db_path is None:
+        search_db.build_doc_index(q_ngrams)
 
-    search_db.build_doc_index(q_ngrams)
+    with open(args.output, 'w') as f:
+        for q in queries:
+            print('== process query \'{}\'...'.format(q['number']))
+            print('retrieve candidate documents...')
+            ranked_list = search_db.retrieve_docs(q['vector'])
+            print('{} docs retrieved'.format(len(ranked_list)))
+            print('rank documents...')
+            r_count = 0
+            for d in ranked_list:
+                val = vsm.sim(d, q, search_db)
+                d['value'] = val
+                r_count += 1
+                if r_count % 10000 == 0:
+                    print('ranked {} docs.'.format(r_count))
+            if len(ranked_list) > 100:
+                ranked_list.sort(key=lambda x: x['value'], reverse=True)
+                ranked_list = ranked_list[:100]
 
+            if args.rel_feedback:
+                print('rank feedback...')
 
-    for q in queries:
-        print('== process query \'{}\'...\n'.format(q['number']))
-        print('retrieve candidate documents...\n')
-        print('rank documents...\n')
-        print('rank feedback...\n')
-        print('store results...\n')
+            print('store results...')
+            for r in ranked_list:
+                f.write('{} {}\n'.format(q['number'][-3:], search_db.doc_id(r['id'])))
 
     search_db.close()
