@@ -1,16 +1,46 @@
 """vector space model"""
+from collections import defaultdict
 import math
 import random
 
 import config
 
-def sim(v1, v2, db):
+def sim(d, q, db):
     """Compute similarity between vector v1 & v2"""
 
     if config.OKAPI_BM25:
-        return okapi_sim(v1, v2, db)
+        return okapi_sim(d, q, db)
     else:
-        return cossim(db.doc_vec(v1['id']), v2['vector'])
+        return cossim(db.doc_vec(d['id']), q['vector'])
+
+def feedback_prepare(doc_list, q, db):
+    if config.OKAPI_BM25:
+        VR = defaultdict(int)
+        VR_len = config.FB_REL
+        VNR = defaultdict(int)
+
+        for d in doc_list[:VR_len]:
+            dvec = db.doc_vec(d['id'])
+            for t in q['vector'].keys():
+                if t in dvec:
+                    VR[t] += 1
+
+        for d in doc_list[-config.FB_NREL:]:
+            dvec = db.doc_vec(d['id'])
+            for t in q['vector'].keys():
+                if t in dvec:
+                    VNR[t] += 1
+
+        return (VR, VR_len, VNR), q
+    else:
+        return None, q
+
+def sim_feedback(fb, d, q, db):
+    if config.OKAPI_BM25:
+        VR, VR_len, VNR = fb
+        return okapi_sim_feedback(d, q, VR, VR_len, VNR, db)
+    else:
+        return sim(d, q, db)
 
 def okapi_sim(d, q, db):
     lavg = config.OK_AVG_L
@@ -29,6 +59,27 @@ def okapi_sim(d, q, db):
             total += (math.log(N/df)
                     * ( ((k1 + 1) * tfd) / (k1*((1-b)+b*(ld/lavg))+tfd) )
                     * ( ((k3+1)*tfq) / (k3+tfq) )
+                    )
+    return total
+
+def okapi_sim_feedback(d, q, VR, VR_len, VNR, db):
+    lavg, N = config.OK_AVG_L, config.OK_N
+    k1, k3, b = config.OK_K1, config.OK_K3, config.OK_B
+    ld = d['length']
+
+    dvec = db.doc_vec(d['id'])
+    qvec = q['vector']
+
+    total = 0.0
+    for t in qvec.keys():
+        if t in dvec:
+            tfd = dvec[t]
+            tfq = qvec[t]
+            df = db.ngram_df(t)
+
+            total += (math.log( ((VR[t]+0.5)/(VNR[t]+0.5)) / ((df-VR[t]+0.5)/(N-df-VR_len+VR[t]+0.5)) )
+                    + math.log( ((k1 + 1) * tfd) / (k1*((1-b)+b*(ld/lavg))+tfd) )
+                    + math.log( ((k3+1)*tfq) / (k3+tfq) )
                     )
     return total
 

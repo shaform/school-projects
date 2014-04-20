@@ -7,6 +7,12 @@ Q_QUESTION = True
 Q_NARRATIVE = True
 Q_CONCEPTS = True
 
+# feedback
+FB_IT = 5
+FB_REL = 5
+FB_NREL = 20
+FB_CUT = 10000
+
 # OKAPI_BM25
 OKAPI_BM25 = True
 OK_AVG_L = 771.77

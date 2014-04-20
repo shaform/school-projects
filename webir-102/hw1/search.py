@@ -3,6 +3,7 @@ import os
 import random
 import sys
 
+import config
 import db
 import query
 import vsm
@@ -66,9 +67,11 @@ if __name__ == '__main__':
     with open(args.output, 'w') as f:
         for q in queries:
             print('== process query \'{}\'...'.format(q['number']))
+
             print('retrieve candidate documents...')
             ranked_list = search_db.retrieve_docs(q['vector'])
             print('{} docs retrieved'.format(len(ranked_list)))
+
             print('rank documents...')
             r_count = 0
             for d in ranked_list:
@@ -77,15 +80,23 @@ if __name__ == '__main__':
                 r_count += 1
                 if r_count % 10000 == 0:
                     print('ranked {} docs.'.format(r_count))
-            if len(ranked_list) > 100:
-                ranked_list.sort(key=lambda x: x['value'], reverse=True)
-                ranked_list = ranked_list[:100]
+            ranked_list.sort(key=lambda x: x['value'], reverse=True)
+            ranked_list = ranked_list[:config.FB_CUT]
 
             if args.rel_feedback:
-                print('rank feedback...')
+                print('start feedback process...')
+                for it in range(config.FB_IT):
+                    print('iteration {}...'.format(it+1))
+                    if len(ranked_list) < config.FB_REL + config.FB_NREL:
+                        continue
+                    fb, q = vsm.feedback_prepare(ranked_list, q, search_db)
+                    for d in ranked_list:
+                        val = vsm.sim_feedback(fb, d, q, search_db)
+                        d['value'] = val
+                    ranked_list.sort(key=lambda x: x['value'], reverse=True)
 
             print('store results...')
-            for r in ranked_list:
+            for r in ranked_list[:100]:
                 f.write('{} {}\n'.format(q['number'][-3:], search_db.doc_id(r['id'])))
 
     search_db.close()

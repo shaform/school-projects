@@ -58,8 +58,7 @@ class Database(object):
         c.execute('select ngram, count from iindex where doc_id = ?', (doc,))
         vec = {}
         for x in c.fetchall():
-            if x[0] not in self.stop_list:
-                vec[x[0]] = x[1]
+            vec[x[0]] = x[1]
         c.close()
         return vec
 
