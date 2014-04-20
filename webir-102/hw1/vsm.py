@@ -40,26 +40,44 @@ def sim(d, q, db):
         return cossim(db.doc_vec(d['id']), q['vector'])
 
 def feedback_prepare(doc_list, q, db):
-    if config.OKAPI_BM25:
-        VR = defaultdict(int)
-        VR_len = config.FB_REL
-        VNR = defaultdict(int)
+#    if config.OKAPI_BM25:
+#        VR = defaultdict(int)
+#        VR_len = config.FB_REL
+#        VNR = defaultdict(int)
+#
+#        for d in doc_list[:VR_len]:
+#            dvec = db.doc_vec(d['id'])
+#            for t in q['vector'].keys():
+#                if t in dvec:
+#                    VR[t] += 1
+#
+#        for d in doc_list[-config.FB_NREL:]:
+#            dvec = db.doc_vec(d['id'])
+#            for t in q['vector'].keys():
+#                if t in dvec:
+#                    VNR[t] += 1
+#
+#        return (VR, VR_len, VNR), q
+#    else:
+#        return None, q
 
-        for d in doc_list[:VR_len]:
-            dvec = db.doc_vec(d['id'])
-            for t in q['vector'].keys():
-                if t in dvec:
-                    VR[t] += 1
+    if config.FB_A != 1:
+        for k in q['vector'].keys():
+            q['vector'][k] *= config.FB_A
 
-        for d in doc_list[-config.FB_NREL:]:
-            dvec = db.doc_vec(d['id'])
-            for t in q['vector'].keys():
-                if t in dvec:
-                    VNR[t] += 1
+    vt = defaultdict(float)
+    for d in doc_list[:config.FB_REL]:
+        dvec = db.doc_vec(d['id'])
+        for t in dvec.keys():
+            if t not in db.stop_list:
+                vt[t] += dvec[t]
 
-        return (VR, VR_len, VNR), q
-    else:
-        return None, q
+    for t in vt:
+        q['vector'][t] += vt[t] * config.FB_B / config.FB_REL
+
+    return None, q
+
+
 
 def sim_feedback(fb, d, q, db):
     if config.OKAPI_BM25:

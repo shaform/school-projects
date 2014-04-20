@@ -61,7 +61,7 @@ def parse_queries(queries, db):
                     '應敘述', '').replace(
                     '包括', '').replace(
                     '主要應', '').split('。')
-            if len(texts) > 1:
+            if len(texts) > 1 and texts[-1].find('不相關') != -1:
                 text = '。'.join(texts[:-1])
             else:
                 text = '。'.join(texts)

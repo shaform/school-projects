@@ -69,7 +69,7 @@ if __name__ == '__main__':
     with open(args.output, 'w') as f:
         pool = None
         if config.PP > 0 and db_path != search_db.MEMORY:
-            print('multiprocessing enabled...')
+            print('== multiprocessing enabled ==')
             pool = Pool(config.PP)
         for q in queries:
             print('== process query \'{}\'...'.format(q['number']))
@@ -79,34 +79,43 @@ if __name__ == '__main__':
             print('{} docs retrieved'.format(len(ranked_list)))
 
             print('rank documents...')
-            if pool is not None:
-                def gen_task():
-                    l = len(ranked_list)
-                    sk = int(l/config.PP) + 1
-                    for i in range(0, l, sk):
-                        yield ranked_list[i:i+sk], q, (search_db, db_path)
-                new_list = pool.map(vsm.rank_docs, gen_task())
-                ranked_list = []
-                for l in new_list:
-                    ranked_list.extend(l)
-            else:
-                vsm.rank_docs((ranked_list, q, search_db))
-
-            ranked_list.sort(key=lambda x: x['value'], reverse=True)
-            ranked_list = ranked_list[:config.FB_CUT]
-
+            fb_it = 1
             if args.rel_feedback:
-                print('start feedback process...')
-                for it in range(config.FB_IT):
-                    print('iteration {}...'.format(it+1))
-                    if len(ranked_list) < config.FB_REL + config.FB_NREL:
-                        continue
-                    fb, q = vsm.feedback_prepare(ranked_list, q, search_db)
-                    for d in ranked_list:
-                        val = vsm.sim_feedback(fb, d, q, search_db)
-                        d['value'] = val
-                    ranked_list.sort(key=lambda x: x['value'], reverse=True)
+                print('== feedback enabled ==')
+                fb_it = config.FB_IT
 
+            for it in range(0,fb_it):
+                if pool is not None:
+                    def gen_task():
+                        l = len(ranked_list)
+                        sk = int(l/config.PP) + 1
+                        for i in range(0, l, sk):
+                            yield ranked_list[i:i+sk], q, (search_db, db_path)
+                    new_list = pool.map(vsm.rank_docs, gen_task())
+                    ranked_list = []
+                    for l in new_list:
+                        ranked_list.extend(l)
+                else:
+                    vsm.rank_docs((ranked_list, q, search_db))
+
+                ranked_list.sort(key=lambda x: x['value'], reverse=True)
+                if args.rel_feedback:
+                    print('iteration {} done...'.format(it+1))
+                    fb, q = vsm.feedback_prepare(ranked_list, q, search_db)
+                    ranked_list = ranked_list[:config.FB_CUT]
+#
+#           if args.rel_feedback:
+#               print('start feedback process...')
+#               for it in range(config.FB_IT):
+#                   print('iteration {}...'.format(it+1))
+#                   if len(ranked_list) < config.FB_REL + config.FB_NREL:
+#                       continue
+#                   fb, q = vsm.feedback_prepare(ranked_list, q, search_db)
+#                   for d in ranked_list:
+#                       val = vsm.sim_feedback(fb, d, q, search_db)
+#                       d['value'] = val
+#                   ranked_list.sort(key=lambda x: x['value'], reverse=True)
+#
             print('store results...')
             for r in ranked_list[:100]:
                 f.write('{} {}\n'.format(q['number'][-3:], search_db.doc_id(r['id'])))
