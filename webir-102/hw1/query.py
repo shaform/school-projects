@@ -41,6 +41,31 @@ def parse_queries(queries, db):
         p_query = dict(query)
         q = defaultdict(int)
 
+        if config.Q_TITLE:
+            for entry in ngram(query['title'], db):
+                q[entry] += 1
+
+        if config.Q_QUESTION:
+            for entry in ngram(query['question'][2:], db):
+                q[entry] += 1
+
+        if config.Q_NARRATIVE:
+            texts = query['narrative'].replace(
+                    '相關文件內容', '').replace(
+                    '應說明', '').replace(
+                    '應包括', '').replace(
+                    '應列舉', '').replace(
+                    '應敘述', '').replace(
+                    '包括', '').replace(
+                    '主要應', '').split('。')
+            if len(texts) > 1:
+                text = '。'.join(texts[:-1])
+            else:
+                text = '。'.join(texts)
+
+            for entry in ngram(text, db):
+                q[entry] += 1
+
         if config.Q_CONCEPTS:
             for w in strip_concepts(query['concepts']):
                 if len(w) > 2:
@@ -65,6 +90,13 @@ def collect_words(queries):
             if len(w) > 2:
                 words.add(w)
     return words
+
+def collect_ngrams(queries):
+    ngrams = set()
+    for query in queries:
+        for w in query['vector'].keys():
+            ngrams.add(w)
+    return ngrams
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:

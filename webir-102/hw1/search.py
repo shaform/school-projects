@@ -52,7 +52,16 @@ if __name__ == '__main__':
         search_db.open(args.model_dir, db_path)
         search_db.build_index()
 
+    
+    print('== analyse queries...\n')
     queries = query.parse_queries(query.parse_xml(args.input), search_db)
+    q_ngrams = query.collect_ngrams(queries)
+    print('{} ngrams collected.\n'.format(len(q_ngrams)))
+
+
+    search_db.build_doc_index(q_ngrams)
+
+
     for q in queries:
         print('== process query \'{}\'...\n'.format(q['number']))
         print('retrieve candidate documents...\n')

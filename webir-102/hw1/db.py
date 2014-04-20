@@ -6,6 +6,7 @@ class Database(object):
     def open(self, model_dir, db_path=MEMORY):
         self.model_dir = model_dir
         self.conn = sqlite3.connect(db_path)
+        self.stop_list = {}
 
     def close(self):
         self.conn.close()
@@ -37,6 +38,12 @@ class Database(object):
                 c.executemany('insert into doc(path, length) values (?,?)', 
                         zip((l[len('./CIRB010/'):-1] for l in f), (int(l) for l in cf)))
 
+        self.conn.commit()
+        c.close()
+
+    def build_doc_index(self, ngrams):
+        c = self.conn.cursor()
+
         print('== build doc index...\n')
         c.execute('create table iindex (ngram TEXT, doc_id INTEGER, count INTEGER)')
         c.execute('create index if not exists iidx_idx_ngram on iindex(ngram)')
@@ -54,7 +61,8 @@ class Database(object):
                             ngram = ng1 + ',' + ng2
                     else:
                         doc_id, count = l.split()
-                        yield ngram, int(doc_id)+1, int(count)
+                        if ngram in ngrams and ngram not in self.stop_list:
+                            yield ngram, int(doc_id)+1, int(count)
                         num -= 1
             c.executemany('insert into iindex(ngram, doc_id, count) values (?,?,?)', 
                     gen_index())
