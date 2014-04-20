@@ -1,0 +1,6 @@
+STOP_LIST = True
+OKAPI_BM25 = True
+Q_TITLE = True
+Q_QUESTION = True
+Q_NARRATIVE = True
+Q_CONCEPTS = True
