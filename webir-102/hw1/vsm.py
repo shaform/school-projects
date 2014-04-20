@@ -1,9 +1,35 @@
 """vector space model"""
 from collections import defaultdict
+
 import math
 import random
 
 import config
+import db
+
+def rank_docs(e):
+    ranked_list, q, search_db = e
+    clean_db = False
+    if not isinstance(search_db, db.Database):
+        new_db = search_db[0]
+        new_db.open_simple(search_db[1])
+        search_db = new_db
+        clean_db = True
+    r_count = 0
+    for d in ranked_list:
+        val = sim(d, q, search_db)
+        d['value'] = val
+        r_count += 1
+        if r_count % 10000 == 0:
+            print('ranked {} docs.'.format(r_count))
+            r_count = 0
+    if r_count != 0:
+        print('ranked {} docs.'.format(r_count))
+
+    if clean_db:
+        search_db.close()
+
+    return ranked_list
 
 def sim(d, q, db):
     """Compute similarity between vector v1 & v2"""

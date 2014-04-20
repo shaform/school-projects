@@ -6,6 +6,9 @@ import config
 
 class Database(object):
     MEMORY = ':memory:'
+    def open_simple(self, db_path):
+        self.conn = sqlite3.connect(db_path)
+
     def open(self, model_dir, doc_dir, db_path=MEMORY):
         self.model_dir = model_dir
         self.doc_dir = doc_dir

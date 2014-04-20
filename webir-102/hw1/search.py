@@ -1,3 +1,5 @@
+from multiprocessing import Pool
+
 import argparse
 import os
 import random
@@ -65,6 +67,10 @@ if __name__ == '__main__':
         search_db.build_doc_index(q_ngrams)
 
     with open(args.output, 'w') as f:
+        pool = None
+        if config.PP > 0 and db_path != search_db.MEMORY:
+            print('multiprocessing enabled...')
+            pool = Pool(config.PP)
         for q in queries:
             print('== process query \'{}\'...'.format(q['number']))
 
@@ -73,13 +79,19 @@ if __name__ == '__main__':
             print('{} docs retrieved'.format(len(ranked_list)))
 
             print('rank documents...')
-            r_count = 0
-            for d in ranked_list:
-                val = vsm.sim(d, q, search_db)
-                d['value'] = val
-                r_count += 1
-                if r_count % 10000 == 0:
-                    print('ranked {} docs.'.format(r_count))
+            if pool is not None:
+                def gen_task():
+                    l = len(ranked_list)
+                    sk = int(l/config.PP) + 1
+                    for i in range(0, l, sk):
+                        yield ranked_list[i:i+sk], q, (search_db, db_path)
+                new_list = pool.map(vsm.rank_docs, gen_task())
+                ranked_list = []
+                for l in new_list:
+                    ranked_list.extend(l)
+            else:
+                vsm.rank_docs((ranked_list, q, search_db))
+
             ranked_list.sort(key=lambda x: x['value'], reverse=True)
             ranked_list = ranked_list[:config.FB_CUT]
 
@@ -98,5 +110,7 @@ if __name__ == '__main__':
             print('store results...')
             for r in ranked_list[:100]:
                 f.write('{} {}\n'.format(q['number'][-3:], search_db.doc_id(r['id'])))
+        if pool is not None:
+            pool.close()
 
     search_db.close()

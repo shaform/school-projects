@@ -32,6 +32,6 @@ for q in sorted(truth.keys()):
             truth[q] -= set([ans])
         total += 1
     MAP += (lMAP / tt)
-    print(lMAP / tt)
+    print('query {}: {}'.format(q, lMAP / tt))
 
-print(MAP / len(truth))
+print('total: {}'.format(MAP / len(truth)))
