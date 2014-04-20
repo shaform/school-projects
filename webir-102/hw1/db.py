@@ -1,12 +1,17 @@
 import os
 import sqlite3
 
+import config
+
 class Database(object):
     MEMORY = ':memory:'
     def open(self, model_dir, db_path=MEMORY):
         self.model_dir = model_dir
         self.conn = sqlite3.connect(db_path)
-        self.stop_list = {}
+        self.stop_list = set()
+        with open(os.path.join(config.P_STOP_LIST), 'r') as f:
+            for e in f.readlines()[:config.STOP_LIST]:
+                self.stop_list.add(e.split('|')[0])
 
     def close(self):
         self.conn.close()
@@ -34,7 +39,7 @@ class Database(object):
         print('== create doc mapping...\n')
         c.execute('create table doc (id INTEGER PRIMARY KEY, path TEXT, length INTEGER)')
         with open(os.path.join(self.model_dir, 'file-list'), 'r') as f:
-            with open(os.path.join('data', 'docs_count'), 'r') as cf:
+            with open(os.path.join(config.P_DOCS_COUNT), 'r') as cf:
                 c.executemany('insert into doc(path, length) values (?,?)', 
                         zip((l[len('./CIRB010/'):-1] for l in f), (int(l) for l in cf)))
 
@@ -68,7 +73,7 @@ class Database(object):
                     gen_index())
 
         print('== build additional index...\n')
-        with open(os.path.join('data', 'words_index'), 'r') as f:
+        with open(os.path.join(config.P_WORDS_INDEX), 'r') as f:
             def gen_index():
                 gc = self.conn.cursor()
                 for l in f:
