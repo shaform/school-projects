@@ -79,6 +79,7 @@ def worker(params):
     terms, search_db = params
     search_db.open_simple(search_db.db_path)
     doc_rank = vsm.rank_terms(terms, search_db)
+    search_db.close()
     print('ranked {} terms...'.format(len(terms)))
     return doc_rank
 
@@ -98,16 +99,15 @@ if __name__ == '__main__':
         if args.rel_feedback:
             print('== feedback enabled ==')
             fb_num = config.FB_IT
-            config.OKAPI_BM25 = False
 
         for q in queries:
             print('== process query \'{}\'...'.format(q['number']))
 
-            print('process terms...')
-            terms = query.process_terms(q['vector'], search_db)
-
             print('rank documents...')
             for it in range(0, fb_num):
+                print('process terms...')
+                terms = query.process_terms(q['vector'], search_db)
+
                 if pool is not None:
                     ranked_list = vsm.ranked_list(pool.map(worker,
                         gen_tasks(terms, search_db)))
@@ -117,9 +117,9 @@ if __name__ == '__main__':
                 if args.rel_feedback:
                     print('iteration {} done...'.format(it+1))
                     q = vsm.qfeedback(ranked_list, q, search_db)
-#                    with open(args.output + '-{}'.format(it), 'a+') as nf:
-#                        for r in ranked_list[:100]:
-#                            nf.write('{} {}\n'.format(q['number'][-3:], search_db.doc_id(r['id'])))
+#                   with open(args.output + '-{}'.format(it), 'a+') as nf:
+#                       for r in ranked_list[:100]:
+#                           nf.write('{} {}\n'.format(q['number'][-3:], search_db.doc_id(r['id'])))
 
             print('store results...')
             for r in ranked_list[:100]:

@@ -108,6 +108,8 @@ def qfeedback(doc_list, q, db):
         for k in q['vector'].keys():
             q['vector'][k] *= config.FB_A
 
+    tt = defaultdict(float)
+
     vt = defaultdict(float)
     for d in doc_list[:config.FB_REL]:
         dvec = db.doc_vec(d['id'])
@@ -115,7 +117,7 @@ def qfeedback(doc_list, q, db):
             if t not in db.stop_list:
                 vt[t] += dvec[t]
     for t in vt:
-        q['vector'][t] += vt[t] * config.FB_B / config.FB_REL
+        tt[t] += vt[t] * config.FB_B / config.FB_REL
 
     vt = defaultdict(float)
     for d in doc_list[-config.FB_NREL:]:
@@ -124,7 +126,11 @@ def qfeedback(doc_list, q, db):
             if t not in db.stop_list:
                 vt[t] -= dvec[t]
     for t in vt:
-        q['vector'][t] += vt[t] * config.FB_C / config.FB_NREL
+        tt[t] += vt[t] * config.FB_C / config.FB_NREL
+
+    for t in tt:
+        if not config.OKAPI_BM25 or tt[t] > 2:
+            q['vector'][t] += tt[t]
 
 #    return None, q
     return q

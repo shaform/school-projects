@@ -105,6 +105,8 @@ def collect_ngrams(queries):
 def process_terms(ts, db):
     terms = []
     for t in ts.keys():
+        if t not in db.idf:
+            db.collect_idfs([t])
         terms.append({
             'ngram': t,
             'tf': ts[t],
