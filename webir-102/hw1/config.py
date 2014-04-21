@@ -11,7 +11,7 @@ PP = 12
 NOT_SKIP_NG = False
 
 # feedback
-FB_IT = 5
+FB_IT = 2
 FB_REL = 20
 FB_NREL = 5000
 FB_A = 1
