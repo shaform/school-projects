@@ -112,7 +112,7 @@ if __name__ == '__main__':
                     ranked_list = vsm.ranked_list(pool.map(worker,
                         gen_tasks(terms, search_db)))
                 else:
-                    ranked_list = vsm.ranked_list([vsm.rank_terms(terms)])
+                    ranked_list = vsm.ranked_list([vsm.rank_terms(terms, search_db)])
 
                 if args.rel_feedback:
                     print('iteration {} done...'.format(it+1))
