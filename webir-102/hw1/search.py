@@ -40,86 +40,87 @@ def process_commands():
             help='Save SQLite3 database.')
     return parser.parse_args()
 
-if __name__ == '__main__':
-
-    args = process_commands()
-
+def create_database(args):
     search_db = db.Database()
     db_path = search_db.MEMORY
     if args.l_db_path is not None:
         db_path = args.l_db_path
-        search_db.open(args.model_dir, args.doc_dir, db_path)
-    else:
-        if args.s_db_path is not None:
-            db_path = args.s_db_path
-            if os.path.exists(db_path):
-                os.remove(db_path)
-        search_db.open(args.model_dir, args.doc_dir, db_path)
+    elif args.s_db_path is not None:
+        db_path = args.s_db_path
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+    search_db.open(args.model_dir, args.doc_dir, db_path)
+    
+    # build index when no db loaded
+    if args.l_db_path is None:
         search_db.build_index()
 
-    
     print('== analyse queries...')
     queries = query.parse_queries(query.parse_xml(args.input), search_db)
     q_ngrams = query.collect_ngrams(queries)
     print('{} ngrams collected.'.format(len(q_ngrams)))
 
+    # build doc index when no db loaded
     if args.l_db_path is None:
         search_db.build_doc_index(q_ngrams)
 
+    search_db.collect_idfs(q_ngrams)
+
+    return queries, search_db
+
+def gen_tasks(terms, search_db):
+    l = len(terms)
+    sk = int(l/config.PP) + 1
+    for i in range(0, l, sk):
+        yield terms[i:i+sk], search_db.copy()
+
+def worker(params):
+    terms, search_db = params
+    search_db.open_simple(search_db.db_path)
+    doc_rank = vsm.rank_terms(terms, search_db)
+    print('ranked {} terms...'.format(len(terms)))
+    return doc_rank
+
+if __name__ == '__main__':
+
+    args = process_commands()
+
+    queries, search_db = create_database(args)
+
     with open(args.output, 'w') as f:
         pool = None
-        if config.PP > 0 and db_path != search_db.MEMORY:
+        if config.PP > 0 and search_db.db_path != search_db.MEMORY:
             print('== multiprocessing enabled ==')
             pool = Pool(config.PP)
+
+        fb_num = 1
+        if args.rel_feedback:
+            print('== feedback enabled ==')
+            fb_num = config.FB_IT
+            config.OKAPI_BM25 = False
+
         for q in queries:
             print('== process query \'{}\'...'.format(q['number']))
 
-            print('retrieve candidate documents...')
-            ranked_list = search_db.retrieve_docs(q['vector'])
-            print('{} docs retrieved'.format(len(ranked_list)))
+            print('process terms...')
+            terms = query.process_terms(q['vector'], search_db)
 
             print('rank documents...')
-            fb_it = 1
-            if args.rel_feedback:
-                print('== feedback enabled ==')
-                fb_it = config.FB_IT
-                config.OKAPI_BM25 = False
-
-            for it in range(0,fb_it):
+            for it in range(0, fb_num):
                 if pool is not None:
-                    def gen_task():
-                        l = len(ranked_list)
-                        sk = int(l/config.PP) + 1
-                        for i in range(0, l, sk):
-                            yield ranked_list[i:i+sk], q, (search_db, db_path)
-                    new_list = pool.map(vsm.rank_docs, gen_task())
-                    ranked_list = []
-                    for l in new_list:
-                        ranked_list.extend(l)
+                    ranked_list = vsm.ranked_list(pool.map(worker,
+                        gen_tasks(terms, search_db)))
                 else:
-                    vsm.rank_docs((ranked_list, q, search_db))
+                    ranked_list = vsm.ranked_list([vsm.rank_terms(terms)])
 
-                ranked_list.sort(key=lambda x: x['value'], reverse=True)
                 if args.rel_feedback:
                     print('iteration {} done...'.format(it+1))
-                    fb, q = vsm.feedback_prepare(ranked_list, q, search_db)
-                    ranked_list = ranked_list[:config.FB_CUT]
-                    with open(args.output + '-{}'.format(it), 'a+') as nf:
-                        for r in ranked_list[:100]:
-                            nf.write('{} {}\n'.format(q['number'][-3:], search_db.doc_id(r['id'])))
-#
-#           if args.rel_feedback:
-#               print('start feedback process...')
-#               for it in range(config.FB_IT):
-#                   print('iteration {}...'.format(it+1))
-#                   if len(ranked_list) < config.FB_REL + config.FB_NREL:
-#                       continue
-#                   fb, q = vsm.feedback_prepare(ranked_list, q, search_db)
-#                   for d in ranked_list:
-#                       val = vsm.sim_feedback(fb, d, q, search_db)
-#                       d['value'] = val
-#                   ranked_list.sort(key=lambda x: x['value'], reverse=True)
-#
+                    q = vsm.qfeedback(ranked_list, q, search_db)
+#                    with open(args.output + '-{}'.format(it), 'a+') as nf:
+#                        for r in ranked_list[:100]:
+#                            nf.write('{} {}\n'.format(q['number'][-3:], search_db.doc_id(r['id'])))
+
             print('store results...')
             for r in ranked_list[:100]:
                 f.write('{} {}\n'.format(q['number'][-3:], search_db.doc_id(r['id'])))

@@ -102,6 +102,17 @@ def collect_ngrams(queries):
             ngrams.add(w)
     return ngrams
 
+def process_terms(ts, db):
+    terms = []
+    for t in ts.keys():
+        terms.append({
+            'ngram': t,
+            'tf': ts[t],
+            'idf': db.idf[t],
+            })
+    return terms
+
+
 if __name__ == '__main__':
     if len(sys.argv) == 2:
         queries = parse_query(sys.argv[1])

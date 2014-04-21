@@ -1,3 +1,4 @@
+import math
 import os
 import sqlite3
 import xml.etree.ElementTree as etree
@@ -6,6 +7,14 @@ import config
 
 class Database(object):
     MEMORY = ':memory:'
+
+    def copy(self):
+        new_db = Database()
+        new_db.stop_list = self.stop_list
+        new_db.idf = self.idf
+        new_db.db_path = self.db_path
+        return new_db
+
     def open_simple(self, db_path):
         self.conn = sqlite3.connect(db_path)
 
@@ -13,10 +22,18 @@ class Database(object):
         self.model_dir = model_dir
         self.doc_dir = doc_dir
         self.conn = sqlite3.connect(db_path)
+        self.db_path = db_path
+
         self.stop_list = set()
         with open(os.path.join(config.P_STOP_LIST), 'r') as f:
             for e in f.readlines()[:config.STOP_LIST]:
                 self.stop_list.add(e.split('|')[0])
+
+        self.idf = {}
+
+    def collect_idfs(self, ngrams):
+        for t in ngrams:
+            self.idf[t] = math.log(config.OK_N/self.ngram_df(t))
 
     def close(self):
         self.conn.close()
@@ -30,6 +47,14 @@ class Database(object):
         ngram = ','.join(grams)
         c.close()
         return ngram
+
+    def doc_by_term(self, term):
+        c = self.conn.cursor()
+        c.execute('select doc_id, count, length from iindex, doc where ngram = ?'
+                ' and doc_id = doc.id', (term,))
+        ret = c.fetchall()
+        c.close()
+        return ret
 
     def retrieve_docs(self, vec):
         c = self.conn.cursor()
@@ -70,6 +95,8 @@ class Database(object):
         c.execute('select count from df where ngram = ?', (ngram,))
         ret = c.fetchone()
         c.close()
+        if ret is None:
+            return 0.000000001
         return ret[0]
     
     def build_index(self):
