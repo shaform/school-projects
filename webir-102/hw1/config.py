@@ -11,18 +11,19 @@ PP = 12
 NOT_SKIP_NG = False
 
 # feedback
-FB_IT = 10
+FB_IT = 5
 FB_REL = 20
 FB_NREL = 5000
-FB_CUT = 10000
+FB_CUT = 100000000000
 FB_A = 1
 FB_B = 0.8
+FB_C = 0.8
 
 # OKAPI_BM25
 OKAPI_BM25 = True
 OK_AVG_L = 771.77
 OK_K1 = 1.6
-OK_K3 = 1.8
+OK_K3 = 1.9
 OK_B = 0.75
 OK_N = 97445
 

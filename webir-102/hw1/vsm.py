@@ -71,9 +71,17 @@ def feedback_prepare(doc_list, q, db):
         for t in dvec.keys():
             if t not in db.stop_list:
                 vt[t] += dvec[t]
-
     for t in vt:
         q['vector'][t] += vt[t] * config.FB_B / config.FB_REL
+
+    vt = defaultdict(float)
+    for d in doc_list[-config.FB_NREL:]:
+        dvec = db.doc_vec(d['id'])
+        for t in dvec.keys():
+            if t not in db.stop_list:
+                vt[t] -= dvec[t]
+    for t in vt:
+        q['vector'][t] += vt[t] * config.FB_C / config.FB_NREL
 
     return None, q
 

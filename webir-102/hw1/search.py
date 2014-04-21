@@ -83,6 +83,7 @@ if __name__ == '__main__':
             if args.rel_feedback:
                 print('== feedback enabled ==')
                 fb_it = config.FB_IT
+                config.OKAPI_BM25 = False
 
             for it in range(0,fb_it):
                 if pool is not None:
