@@ -112,7 +112,7 @@ class Database(object):
                             ngram = ng1 + ',' + ng2
                     else:
                         doc_id, count = l.split()
-                        if ngram in ngrams and ngram:
+                        if config.NOT_SKIP_NG or (ngram in ngrams and len(ngram) > 0):
                             yield ngram, int(doc_id)+1, int(count)
                         num -= 1
             c.executemany('insert into iindex(ngram, doc_id, count) values (?,?,?)', 

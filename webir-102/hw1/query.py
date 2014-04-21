@@ -61,6 +61,7 @@ def parse_queries(queries, db):
                     '應敘述', '').replace(
                     '包括', '').replace(
                     '主要應', '').split('。')
+            texts = [x for x in texts if x]
             if len(texts) > 1 and texts[-1].find('不相關') != -1:
                 text = '。'.join(texts[:-1])
             else:
@@ -72,7 +73,7 @@ def parse_queries(queries, db):
         if config.Q_CONCEPTS:
             for w in strip_concepts(query['concepts']):
                 if len(w) > 2:
-                    q[db.ngram(w)] += 1
+                    q[db.ngram(w)] += config.Q_C_W
                 for entry in ngram(w, db):
                     q[entry] += 1
 

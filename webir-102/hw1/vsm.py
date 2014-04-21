@@ -37,7 +37,7 @@ def sim(d, q, db):
     if config.OKAPI_BM25:
         return okapi_sim(d, q, db)
     else:
-        return cossim(db.doc_vec(d['id']), q['vector'])
+        return cos_sim(db.doc_vec(d['id']), q['vector'])
 
 def feedback_prepare(doc_list, q, db):
 #    if config.OKAPI_BM25:

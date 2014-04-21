@@ -103,6 +103,9 @@ if __name__ == '__main__':
                     print('iteration {} done...'.format(it+1))
                     fb, q = vsm.feedback_prepare(ranked_list, q, search_db)
                     ranked_list = ranked_list[:config.FB_CUT]
+                    with open(args.output + '-{}'.format(it), 'a+') as nf:
+                        for r in ranked_list[:100]:
+                            nf.write('{} {}\n'.format(q['number'][-3:], search_db.doc_id(r['id'])))
 #
 #           if args.rel_feedback:
 #               print('start feedback process...')
