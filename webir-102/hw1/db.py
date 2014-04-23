@@ -50,7 +50,7 @@ class Database(object):
 
     def doc_by_term(self, term):
         c = self.conn.cursor()
-        c.execute('select doc_id, count, length from iindex, doc where ngram = ?'
+        c.execute('select doc_id, count, length, size from iindex, doc where ngram = ?'
                 ' and doc_id = doc.id', (term,))
         ret = c.fetchall()
         c.close()
@@ -110,11 +110,14 @@ class Database(object):
                     ([l[:-1]] for l in f))
 
         print('== create doc mapping...')
-        c.execute('create table doc (id INTEGER PRIMARY KEY, path TEXT, length INTEGER)')
+        c.execute('create table doc (id INTEGER PRIMARY KEY, path TEXT, length INTEGER, size INTEGER)')
         with open(os.path.join(self.model_dir, 'file-list'), 'r') as f:
             with open(os.path.join(config.P_DOCS_COUNT), 'r') as cf:
-                c.executemany('insert into doc(path, length) values (?,?)', 
-                        zip((l[len('./CIRB010/'):-1] for l in f), (int(l) for l in cf)))
+                with open(os.path.join(config.P_DOCS_SIZE), 'r') as sf:
+                    c.executemany('insert into doc(path, length, size) values (?,?,?)', 
+                            zip((l[len('./CIRB010/'):-1] for l in f),
+                                (int(l) for l in cf),
+                                (float(l) for l in sf)))
 
         self.conn.commit()
         c.close()

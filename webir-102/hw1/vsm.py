@@ -24,7 +24,7 @@ def ranked_list(doc_ranks):
 def okapi_rank_terms(ts, db):
     doc_rank = defaultdict(float)
     for t in ts:
-        for doc_id, tfd, ld in db.doc_by_term(t['ngram']):
+        for doc_id, tfd, ld, _ in db.doc_by_term(t['ngram']):
             lavg = config.OK_AVG_L
             k1 = config.OK_K1
             k3 = config.OK_K3
@@ -41,8 +41,8 @@ def okapi_rank_terms(ts, db):
 def cos_rank_terms(ts, db):
     doc_rank = defaultdict(float)
     for t in ts:
-        for doc_id, tfd, ld in db.doc_by_term(t['ngram']):
-            doc_rank[doc_id] += t['tf']*t['idf']*tfd
+        for doc_id, tfd, _, sd in db.doc_by_term(t['ngram']):
+            doc_rank[doc_id] += t['tf']*t['idf']*tfd / sd
     return doc_rank
 
 def rank_terms(ts, db):

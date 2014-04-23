@@ -32,4 +32,5 @@ P_DATA_DIR = os.path.join(os.path.dirname(
     'data')
 P_STOP_LIST = os.path.join(P_DATA_DIR, 'stoplist.zh_TW.u8')
 P_DOCS_COUNT = os.path.join(P_DATA_DIR, 'docs_count')
+P_DOCS_SIZE = os.path.join(P_DATA_DIR, 'docs_size')
 P_WORDS_INDEX = os.path.join(P_DATA_DIR, 'words_index')
