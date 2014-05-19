@@ -19,10 +19,12 @@ type Graph struct {
 	inEdges    [][]int
 	outDegree  []int
 	emptyNodes []int
+	nNode      int
+	nEdge      int
 }
 
 func NewGraph(size int) *Graph {
-	return &Graph{make([][]int, size), make([]int, size), []int{}}
+	return &Graph{make([][]int, size), make([]int, size), []int{}, size, 0}
 }
 
 func constructGraph(fnGraph string) *Graph {
@@ -67,6 +69,7 @@ func constructGraph(fnGraph string) *Graph {
 		}
 		idx--
 		g.outDegree[idx] = outDeg
+		g.nEdge += outDeg
 		for i := 0; i < outDeg; i++ {
 			var oIdx int
 			fmt.Fscan(bGraph, &oIdx)
@@ -84,41 +87,31 @@ func constructGraph(fnGraph string) *Graph {
 	for idx, dg := range g.outDegree {
 		if dg == 0 {
 			g.emptyNodes = append(g.emptyNodes, idx)
-			g.outDegree[idx] = size
 		}
 	}
 	return g
 }
 
-type Prob struct {
-	idx       int
-	outDegree float64
-	inWeights []float64
-}
-
-type Ans struct {
-	idx    int
-	pg     float64
-	weight float64
-}
-
-// 3.65999358s
 func pagerank(g *Graph, d float64, eps float64) []float64 {
-	glen := len(g.outDegree)
+	glen := g.nNode
 	pg1, pg2 := make([]float64, glen), make([]float64, glen)
 	weight1, weight2 := make([]float64, glen), make([]float64, glen)
+
 	// initialize pagerank
 	for i := range pg1 {
 		pg1[i] = float64(1.0)
-		weight1[i] = float64(1.0) / float64(g.outDegree[i])
+		if g.outDegree[i] != 0 {
+			weight1[i] = float64(1.0) / float64(g.outDegree[i])
+		}
 	}
 
 	// power iteration
 	for {
 		totalE := float64(0.0)
 		for _, idx := range g.emptyNodes {
-			totalE += weight1[idx]
+			totalE += pg1[idx]
 		}
+		totalE /= float64(glen)
 
 		diff := float64(0.0)
 		for i := range pg2 {
@@ -127,7 +120,10 @@ func pagerank(g *Graph, d float64, eps float64) []float64 {
 				w += weight1[idx]
 			}
 			pg2[i] = (1.0 - d) + d*w
-			weight2[i] = pg2[i] / float64(g.outDegree[i])
+			if g.outDegree[i] != 0 {
+				weight2[i] = pg2[i] / float64(g.outDegree[i])
+			}
+
 			diff += math.Pow(pg1[i]-pg2[i], 2)
 		}
 
@@ -160,6 +156,7 @@ func outputPagerank(pg []float64, fnRank string) {
 
 func main() {
 	// process command line arguments
+
 	dPtr := flag.Float64("d", DP, "damping factor")
 	epsPtr := flag.Float64("e", ESP, "epsilon")
 	outputPtr := flag.String("o", OFILE, "output file")
@@ -174,10 +171,16 @@ func main() {
 	dNum := *dPtr
 	eps := *epsPtr
 
+	fmt.Printf("executing with damping factor %f, epsilon %f\n",
+		dNum, eps)
+
 	// read the file
 
 	fmt.Println("constructing graph...")
+
 	g := constructGraph(fnGraph)
+
+	fmt.Printf("%d nodes and %d edges loaded.\n", g.nNode, g.nEdge)
 
 	//
 
@@ -192,5 +195,6 @@ func main() {
 	//
 
 	fmt.Println("store result...")
+
 	outputPagerank(pg, fnRank)
 }
