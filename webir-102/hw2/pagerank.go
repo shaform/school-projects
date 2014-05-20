@@ -145,7 +145,7 @@ func outputPagerank(pg []float64, fnRank string) {
 		os.Exit(1)
 	}
 	for i, v := range pg {
-		fmt.Fprintf(fRank, "%d:%f\n", i+1, v)
+		fmt.Fprintf(fRank, "%d:%.16f\n", i+1, v)
 	}
 	if err := fRank.Close(); err != nil {
 		fmt.Println("cannot close file!")
