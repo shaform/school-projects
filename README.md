@@ -26,7 +26,7 @@ The original authors include:
 
 ## License
 
-Python code is licensed under released under GPLv3, see LICENSE for detail.
+Python code is licensed under released under GPLv3, see [LICENSE](https://raw.githubusercontent.com/shaform/newsmeter/master/LICENSE) for detail.
 
 The webpage design is licensed under [Attribution-NonCommercial-ShareAlike 2.0 Generic](https://creativecommons.org/licenses/by-nc-sa/2.0/).
 
