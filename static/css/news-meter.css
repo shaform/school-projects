@@ -1,0 +1,178 @@
+/* Reference: http://w3lessons.info/2013/06/04/skill-bar-with-jquery-css3/ */
+html {
+}
+h1 {
+    color: #fff;
+}
+.container {
+    max-width: 900px;
+    text-align: center;
+}
+.news-meter-top {
+}
+.loading {
+    color: #fff;
+    font-size: 150%;
+}
+.footer {
+    color: #666;
+    padding-top: 300px;
+    background: right top url('../img/text.png') no-repeat;
+}
+.meter-form {
+    padding-top: 100px;
+    padding-bottom: 100px;
+    background: center center url('../img/flower.jpg') no-repeat;
+}
+.meter-form form {
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.news-event {
+    margin-bottom: 20px;
+}
+#stanceboard {
+    margin-top: 20px;
+}
+.header {
+}
+body {
+    background: #000;
+}
+
+/* chart */
+.stancebar {
+    position: relative;
+    display: block;
+    margin-bottom: 15px;
+    width: 100%;
+    background: #eee;
+    height: 35px;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    -webkit-transition: 0.4s linear;
+    -moz-transition: 0.4s linear;
+    -ms-transition: 0.4s linear;
+    -o-transition: 0.4s linear;
+    transition:0 .4s linear;
+    -webkit-transition-property: width, background-color;
+    -moz-transition-property: width, background-color;
+    -ms-transition-property: width, background-color;
+    -o-transition-property: width, background-color;
+    transition-property: width, background-color;
+}
+
+.stancebar-title {
+    position: relative;
+    display: inline-block;
+    top: 0;
+    left: 0;
+    right: 0;
+    min-width: 20%;
+    margin-left:  auto;
+    margin-right:  auto;
+    font-weight: bold;
+    font-size: 13px;
+    color: #fff;
+    background:  #000;
+    -webkit-border-top-left-radius: 3px;
+    -webkit-border-bottom-left-radius: 4px;
+    -moz-border-radius-topleft: 3px;
+    -moz-border-radius-bottomleft: 3px;
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+    z-index: 1;
+}
+
+.stancebar-title span {
+    display: block;
+    background: rgba(0, 0, 0, 0.1);
+    padding: 0 20px;
+    height: 35px;
+    line-height: 35px;
+    -webkit-border-top-left-radius: 3px;
+    -webkit-border-bottom-left-radius: 3px;
+    -moz-border-radius-topleft: 3px;
+    -moz-border-radius-bottomleft: 3px;
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+}
+
+.stancebar-bar {
+    position:absolute;
+    right: 0;
+    left: 0;
+    top: 0;
+    height: 35px;
+    width: 0px;
+    background: #6adcfa;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+}
+.stancebar-bar-right {
+    margin-right: auto;
+    margin-left: 60%;
+    background: #88cd2a;
+}
+.stancebar-news-right .score {
+    color: #88cd2a;
+}
+
+.stancebar-bar-left {
+    margin-right: 60%;
+    margin-left: auto;
+    background: rgb(250, 110, 110);
+}
+.stancebar-news-left .score {
+    color: rgb(250, 110, 110);
+}
+
+.stancebar-percent {
+    position: absolute;
+    top: 0;
+    font-size: 11px;
+    height: 35px;
+    line-height: 35px;
+    color: #444;
+/*    color: rgba(0, 0, 0, 0.4); */
+}
+.stancebar-percent-right {
+    right: 10px;
+}
+.stancebar-percent-left {
+    left: 10px;
+}
+.stancebar-news {
+    color: #fff;
+    padding: 0;
+}
+.stancebar-news li {
+    padding: 0;
+    margin: 0;
+}
+.stancebar-news-left {
+    list-style: none;
+    text-align: left;
+    float: left;
+}
+.stancebar-news-right {
+    list-style: none;
+    float: right;
+    text-align: right;
+}
+.news-window {
+    padding: 10px;
+    margin-right: auto;
+    margin-left: auto;
+    max-width: 900px;
+    background-color: #fff;
+}
+.news-window h1 {
+    color: #000;
+}
+.news-link {
+    cursor: pointer;
+}
