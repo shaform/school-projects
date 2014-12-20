@@ -1,4 +1,4 @@
 nctu-projects
 =============
 
-Some projects that I have done at NCTU
+Some projects that I have done at schools.
