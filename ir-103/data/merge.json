@@ -1,0 +1,10 @@
+{
+    "media": {
+        "default": "results/p2.concat.deept.tfidf3.doc.1.txt",
+        "1": "results/p2.concat.deept.tfidf3.doc.1.txt"
+    },
+    "date": {
+        "default": "results/p2.concat.deept.tfidf3.doc.2.txt",
+        "1": "results/p2.concat.deept.tfidf3.doc.2.txt"
+    }
+}
