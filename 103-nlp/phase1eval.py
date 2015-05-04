@@ -39,7 +39,7 @@ def eval_f1(teacher, student):
         if v == '1':
             predicted += 1
 
-    prec = correct / predicted
+    prec = correct / predicted if predicted != 0 else 1
     recall = correct / total
     f1 = 2 * prec * recall / (prec + recall)
     accuracy = same / len(teacher)
