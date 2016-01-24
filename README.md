@@ -12,6 +12,10 @@ Each line of the score-list file must contian a floating number representing the
 
 注意到這個版本並沒有提供新聞立場分析的程式碼，你需要自行在 wm 資料夾建立一個 score-list 檔案。這個檔案每一行都是一個浮點數，代表在 file-list 裡每則新聞的正負傾向。
 
+![homepage](https://raw.githubusercontent.com/shaform/newsmeter/master/static/img/screenshots/home.png)
+
+![news sentiment](https://raw.githubusercontent.com/shaform/newsmeter/master/static/img/screenshots/sentiment.png)
+
 ## Author
 
 Yong-Siang Shih
