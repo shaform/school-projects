@@ -20,15 +20,15 @@ Each line of the score-list file must contian a floating number representing the
 
 ## Author
 
-Yong-Siang Shih
-
 News Meter is originally a programming project for Web Retrieval and Mining course Spring 2014 at National Taiwan University.
 The original authors include:
 
 * Junjie Wang - Responsible for news crawling.
 * 劉宇錚 - Responsible for sentiment analysis.
 * Yen-Chi Shao - Responsible for sentiment analysis.
-* Yong-Siang Shih - Responsible for everything in this git repository.
+* Yong-Siang Shih - Responsible for frontend design, backend Python programming, and search engine implementation.
+
+Notice that this git repository does not contain news articles and news sentiment analysis. By default, it retrieves news from Google News and produces random scores for news sentiment analysis.
 
 ## License
 
