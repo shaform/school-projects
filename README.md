@@ -24,7 +24,7 @@ News Meter is originally a programming project for Web Retrieval and Mining cour
 The original authors include:
 
 * Junjie Wang - Responsible for news crawling.
-* 劉宇錚 - Responsible for sentiment analysis.
+* Yu-Jeng Liu - Responsible for sentiment analysis.
 * Yen-Chi Shao - Responsible for sentiment analysis.
 * Yong-Siang Shih - Responsible for frontend design, backend Python programming, and search engine implementation.
 
