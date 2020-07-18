@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    {% block htmlhead %}
+    <head>
+        {% block encoding %}<meta charset="utf-8">{% endblock %}
+        <title>{%block htmltitle %}{% endblock %}</title>
+        {% block stylesheets %}
+        <link rel="stylesheet" href="{{ STATIC_URL }}css/bootstrap.min.css" />
+        <link rel="stylesheet" href="{{ STATIC_URL }}css/bootstrap-responsive.min.css" />
+        <link rel="stylesheet" href="{{ STATIC_URL }}css/style.css" />
+        {% endblock %}
+        {% block additionalhead %}
+        {% endblock %}
+    </head>
+    {% endblock %}
+    
+    {% block htmlbody %}
+    <body>
+        {% block bodyblock %}
+        {% endblock %}
+        <script src="{{ STATIC_URL }}js/jquery-1.7.2.min.js"></script>
+        <script src="{{ STATIC_URL }}js/bootstrap.min.js"></script>
+        <script src="{{ STATIC_URL }}js/jquery-ui-1.7.2.custom.min.js"></script>
+        <script src="{{ STATIC_URL }}js/jquery-dynamic-form.js"></script>
+        <script type="text/javascript">
+            $(document).ready (function() {
+                    $("#duplicate").dynamicForm("#plus",
+                        "#minus",
+                        {limit:6, createColor:"yellow", removeColor:"red"});
+                    });
+        </script>
+        {% block tailscript %}
+        {% endblock %}
+    </body>
+    {% endblock %}
+</html>

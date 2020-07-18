@@ -1,0 +1,45 @@
+{% extends 'table.html' %}
+{% block content %}
+<div id="table_div"></div>
+{% if desc %}{{ desc|linebreaks }}{% endif %}
+{% if images %}
+<h2>Images</h2>
+{% for image in images %}
+<img src="{{ image }}" class="thumbnail"/>
+{% endfor %}
+{% endif %}
+{% if characters %}
+<h2>Characters</h2>
+<table class="table table-bordered">
+    <tr>
+        <th>Name</th>
+        <th>Gender</th>
+        <th>Voiced By</th>
+        <th>Description</th>
+        <th>Images</th>
+        <th>-</th>
+    </tr>
+    {% for c in characters %}
+    <tr>
+        <td>{{ c.0 }}</td>
+        <td>{{ c.1 }}</td>
+        <td>{{ c.2 }}</td>
+        <td>{{ c.3 }}</td>
+        <td>
+            {% for image in c.4 %}
+            <img src="{{ image }}" class="thumbnail" />
+            {% endfor %}
+        </td>
+        <td><a href="{% url animedbs.views.edit_anime_character anime_id c.0 %}">edit</a></td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+<p></p>
+{% if seasons %}
+<h2>Seasons</h2>
+{% for season in seasons %}
+{% include 'season_object.html' %}
+{% endfor %}
+{% endif %}
+{% endblock %}

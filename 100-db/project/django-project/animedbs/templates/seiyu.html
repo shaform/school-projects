@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block users %}active{% endblock %}
+{% block pagetitle %}{{ row.1 }}{% endblock %}
+{% block header %}
+<h1>{{ row.1 }}</h1>
+{% endblock %}
+{% block content %}
+<table class="table table-bordered">
+    <thead>
+        <tr>
+        {% for col in table_header %}
+            <th>{{ col }}</th>
+        {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>{{ row.0 }}</td>
+            <td>{{ row.1 }}</td>
+            <td>{{ row.2 }}</td>
+            <td>{{ row.3 }}</td>
+            <td>{{ row.4|linebreaks }}</td>
+        </tr>
+    </tbody>
+</table>
+<h2>Participated Animes</h2>
+<ul>
+    {% for name in animes %}
+    <li>{{ name.0 }}</li>
+    {% endfor %}
+</ul>
+<h2>Characters</h2>
+<ul>
+    {% for name in characters %}
+    <li>{{ name.0 }}</li>
+    {% endfor %}
+</ul>
+<h2>Songs</h2>
+<ul>
+    {% for name in songs %}
+    <li>{{ name.0 }}</li>
+    {% endfor %}
+</ul>
+{% endblock %}
