@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>媒體立場儀</title>
+
+<!-- Bootstrap -->
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+<!-- Magnific Popup core CSS file -->
+<link href="{{ url_for('static', filename='css/magnific-popup.css') }}" rel="stylesheet"> 
+
+<link href="{{ url_for('static', filename='css/news-meter.css') }}" rel="stylesheet">
+<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+<!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="container news-meter-top">
+    <h1>媒體立場儀</h1>
+    <div class="meter-form">
+        <form id="search_form" role="search">
+            <div class="input-group">
+                <input name="event" type="text" class="form-control" placeholder="輸入新聞事件">
+                <span class="input-group-btn">
+                    <button type="submit" class="btn btn-default">
+                        <span class="glyphicon glyphicon-search"></span>
+                        搜尋</button>
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="container news-event hide">
+    <h1>「<span id="news-keyword"></span>」</h1>
+    <div id="stanceboard">
+        <div class="stancebar clearfix" data-percent="44%">
+            <div class="stancebar-bar stancebar-bar-left"></div>
+            <div class="stancebar-title"><span>中天新聞</span></div>
+            <div class="stancebar-percent stancebar-percent-left">44%-</div>
+        </div>
+        <div class="stancebar clearfix" data-percent="22%">
+            <div class="stancebar-title"><span>蘋果日報</span></div>
+            <div class="stancebar-bar stancebar-bar-right"></div>
+            <div class="stancebar-percent stancebar-percent-right">22%+</div>
+        </div>
+    </div>
+    <a id="return" class="btn btn-success">再找一次</a>
+</div>
+<div class="container footer">
+    <p>picture from <a href="https://www.flickr.com/photos/jimmykang/13527464985/in/photolist-mBnN3V-mBprtd-mBongX-mBonh8-mBnRAX-mBom6v-mBnSwp-mBomgk-mBokt8-mkgSF9-mkeLAP-mkgV8o-mCs3de-mhe4AQ-mibD9R-mibnZp-n3MnLZ-mCszfx-mwpZVM-mwcejC-mkeMQx-msJPHa-n4ERdT-mrZvti-mqSCgg-mBSCHK-mBSD9V-mUABdR-mUANxc-mBSDkr-msKpvi-mkfuHT-mwokS5-n9n45U-mKmw8b-mZVmLW-micUpv-msLHMY-mCsA9B-mAmApT-mkgQDd-mj6viq-mhcbWX-mCo49i-mZUGSE-mUyFnX-meS9gp-mZHpcx-mAjPhR-mwjMhT/">20140330 太陽花學運@立法院</a>, licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/2.0/">CC BY-NC-SA 2.0</a></p>
+</div>
+
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<!-- Magnific Popup core JS file -->
+<script src="{{ url_for('static', filename='js/jquery.magnific-popup.min.js') }}"></script> 
+
+<script>
+var search_complete = function(res, status) {
+    var jObj = res.responseJSON.items;
+    if (status == 'success' && jObj.length > 0) {
+        var html = '';
+        for (var i=0; i<jObj.length; ++i) {
+            var score = jObj[i].score;
+            var direction = '';
+            var sign = '';
+            if (score > 0) {
+                direction = 'right';
+                sign = '+';
+            } else {
+                direction = 'left';
+                sign = '-';
+            }
+            var escore = Math.floor(Math.abs(score*100));
+            html += '<div data-source="' + i + '" class="source">\n'
+                + '<div class="stancebar clearfix" data-percent="' + escore + '">\n'
+                + '  <div class="stancebar-bar stancebar-bar-' +  direction + '"></div>\n'
+                + '  <div class="stancebar-title"><span>' + jObj[i].source + '</span></div>\n'
+                + '  <div class="stancebar-percent stancebar-percent-' + direction + '">'
+                + escore +'%' + sign + '</div>\n'
+                + '</div>\n';
+            html += '<ul class="stancebar-news stancebar-news-right">\n';
+            for (var j=0; j<jObj[i].positive.length; ++j) {
+                var escore = '+' + Math.floor(Math.abs(jObj[i].positive[j][0]*100)) + '%';
+                html += '<li class="news-link" data-pos="' + j + '">' + jObj[i].positive[j][1].title + ' @ <span class="score">' + escore + '</span></li>\n';
+            }
+            html += '</ul>\n';
+            html += '<ul class="stancebar-news stancebar-news-left">\n';
+            for (var j=0; j<jObj[i].negative.length; ++j) {
+                var escore = '-' + Math.floor(Math.abs(jObj[i].negative[j][0]*100)) + '%';
+                html += '<li class="news-link" data-neg="' + j + '"><span class="score">' + escore + '</span> @ ' + jObj[i].negative[j][1].title + '</li>\n';
+            }
+            html += '</ul>\n'
+                + '</div>\n'
+                + '<div style="clear: both;"></div>\n';
+        }
+        $('#stanceboard').html(html);
+        $('.news-link').each(function() {
+            var source = jObj[parseInt($(this).parents('.source').data('source'))];
+            var pos_id = $(this).data('pos');
+            var neg_id = $(this).data('neg');
+            var escore = $(this).children('.score').text();
+            if (typeof pos_id != 'undefined') {
+                var item = source.positive[parseInt(pos_id)][1];
+            } else if (typeof neg_id != 'undefined') {
+                var item = source.negative[parseInt(neg_id)][1];
+            }
+
+            var newsWindow = $('<div class="news-window">'
+                + '<h2>' + source.source + '</h2>\n'
+                + '<h1>' + item.title + ' : ' + escore + '</h1>\n'
+                + '<pre>' + item.text + '</pre>\n'
+                + '</div>');
+            $(this).magnificPopup({
+                items: {
+                    src: newsWindow,
+                    type: 'inline'
+                }
+            });
+        });
+        render_stance();
+    } else {
+        $('#stanceboard').html('<div class="alert alert-danger">沒有結果</div>');
+    }
+};
+var switch_tab = function(t) {
+    $('.news-meter-top, .news-event').addClass('hide');
+    $(t).removeClass('hide');
+};
+var render_stance =  function() {
+    $('.stancebar').each(function(){
+        $(this).find('.stancebar-bar').animate({
+            width: $(this).attr('data-percent')*40/100 + '%'
+        },6000);
+    });
+};
+
+$('#search_form').submit(function(e){
+    e.preventDefault();
+    var keyword = $('form input[name="event"]').val();
+    if (keyword) {
+        var data = {data: $('form input[name="event"]').val(),
+            fnc: 'search',
+        };
+        $.ajax({ type: 'POST', url: '{{ url_for('ajax') }}', data: data, complete: search_complete });
+        switch_tab('.news-event');
+        $('#news-keyword').text(keyword);
+        $('#stanceboard').html('<div class="alert alert-info">Searching...</div>');
+    }
+});
+$('#return').click(function(e){
+    e.preventDefault();
+    switch_tab('.news-meter-top');
+    $('form input[name="event"]').val('').focus();
+});
+$('form input[name="event"]').focus();
+</script>
+</body>
+</html>
